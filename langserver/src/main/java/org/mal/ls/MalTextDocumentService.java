@@ -2,6 +2,8 @@ package org.mal.ls;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.HashMap;
 import java.util.concurrent.CompletableFuture;
 
 import org.eclipse.lsp4j.CodeAction;
@@ -36,23 +38,44 @@ import org.eclipse.lsp4j.TextEdit;
 import org.eclipse.lsp4j.WorkspaceEdit;
 import org.eclipse.lsp4j.jsonrpc.messages.Either;
 import org.eclipse.lsp4j.services.TextDocumentService;
+import org.mal.ls.MalCompletionItemsTexts;
 
 public class MalTextDocumentService implements TextDocumentService {
+
+  private MalCompletionItemsTexts texts = new MalCompletionItemsTexts();
+
   @Override
   public CompletableFuture<Either<List<CompletionItem>, CompletionList>> completion(CompletionParams completionParams) {
-    return CompletableFuture.supplyAsync(() -> {
-      List<CompletionItem> completionItems = new ArrayList<>();
-      CompletionItem completionItem = new CompletionItem();
-      completionItem.setInsertText("asset  {\n\t[]\n}");
-      completionItem.setLabel("asset");
-      completionItem.setKind(CompletionItemKind.Snippet);
-      completionItem.setDetail(
-          "When the MAL compiler generates the Java code from the MAL specifications, an asset is translated into a java class.");
-
-      completionItems.add(completionItem);
+    HashMap<String, String> ciHashMap = texts.getciHashMap();
+    List<CompletionItem> completionItems = new ArrayList<>();
+    
+    return CompletableFuture.supplyAsync(() -> {  
+      
+      String key1 = "", key2 = "", key3 = "";
+      
+      for (Map.Entry<String, String> ci : ciHashMap.entrySet()) {
+        String[] item = ci.getKey().split(".", 2);
+        if(item[1] == "text")
+          key1 = ci.getKey();
+        if(item[1] == "label")
+          key2 = ci.getKey();
+        if(item[1] == "info") {
+          key3 = ci.getKey();
+          completionItems.add(addCompetionItem(ciHashMap.get(key1), ciHashMap.get(key2), ciHashMap.get(key3)));
+        }
+      }
 
       return Either.forLeft(completionItems);
     });
+  }
+
+  private CompletionItem addCompetionItem(String text, String label, String info) {
+    CompletionItem ci = new CompletionItem();
+    ci.setInsertText(text);
+    ci.setLabel(label);
+    ci.setKind(CompletionItemKind.Snippet);
+    ci.setDetail(info);
+    return ci;
   }
 
   @Override
