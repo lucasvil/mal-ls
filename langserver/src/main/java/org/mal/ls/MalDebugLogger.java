@@ -13,11 +13,11 @@ public class MalDebugLogger {
 
     public MalDebugLogger() {
         try {
+            // CHANGE PATH
             this.fh = new FileHandler("/home/erik/Documents/Log.log");  
             logger.addHandler(this.fh);
             SimpleFormatter formatter = new SimpleFormatter();  
             fh.setFormatter(formatter);
-            this.logger.info("!!!!!!!");
         } catch(IOException e) {
             e.printStackTrace();
         }

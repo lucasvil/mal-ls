@@ -1,5 +1,7 @@
 package org.mal.ls;
 
+import java.io.*;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -40,33 +42,25 @@ import org.eclipse.lsp4j.WorkspaceEdit;
 import org.eclipse.lsp4j.jsonrpc.messages.Either;
 import org.eclipse.lsp4j.services.TextDocumentService;
 
-import org.mal.ls.MalCompletionItemsTexts;
+import org.mal.ls.CompletionItemsHandler;
 import org.mal.ls.MalDebugLogger;
 
 public class MalTextDocumentService implements TextDocumentService {
 
-  private MalCompletionItemsTexts texts = new MalCompletionItemsTexts();
+  private CompletionItemsHandler texts = new CompletionItemsHandler();
   private MalDebugLogger logger = new MalDebugLogger();
 
   @Override
   public CompletableFuture<Either<List<CompletionItem>, CompletionList>> completion(CompletionParams completionParams) {
-    HashMap<String, String> ciHashMap = texts.getciHashMap();
+    HashMap<String, String[]> ciHashMap = texts.getciHashMap();
     List<CompletionItem> completionItems = new ArrayList<>();
 
-    return CompletableFuture.supplyAsync(() -> {  
-      this.logger.log("TEEEESSSSTTTT");
+    return CompletableFuture.supplyAsync(() -> {
 
-      String key1 = "", key2 = "", key3 = "";
-      for (Map.Entry<String, String> ci : ciHashMap.entrySet()) {
-        String[] item = ci.getKey().split(".", 2);
-        if(item[1] == "text")
-          key1 = ci.getKey();
-        if(item[1] == "label")
-          key2 = ci.getKey();
-        if(item[1] == "info") {
-          key3 = ci.getKey();
-          completionItems.add(addCompetionItem(ciHashMap.get(key1), ciHashMap.get(key2), ciHashMap.get(key3)));
-        }
+      for (Map.Entry<String, String[]> ci : ciHashMap.entrySet()) {
+        String key = ci.getKey();
+        String value[] = ciHashMap.get(key);
+        completionItems.add(addCompetionItem(value[0], value[1], value[2]));      
       }
 
       return Either.forLeft(completionItems);
