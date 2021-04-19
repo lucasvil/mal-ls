@@ -5,7 +5,7 @@ import java.util.HashMap;
 public class MalCompletionItemsTexts {
     private HashMap<String, String> ciHashMap;
 
-    public MalCompletionItemsTexts(){
+    public MalCompletionItemsTexts() {
         ciHashMap = new HashMap<String, String>();
         
         ciHashMap.put("asset.text", "asset  {\n\t[]\n}");

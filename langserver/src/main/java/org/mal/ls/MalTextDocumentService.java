@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.HashMap;
 import java.util.concurrent.CompletableFuture;
+import java.util.logging.Logger;
 
 import org.eclipse.lsp4j.CodeAction;
 import org.eclipse.lsp4j.CodeActionParams;
@@ -38,21 +39,24 @@ import org.eclipse.lsp4j.TextEdit;
 import org.eclipse.lsp4j.WorkspaceEdit;
 import org.eclipse.lsp4j.jsonrpc.messages.Either;
 import org.eclipse.lsp4j.services.TextDocumentService;
+
 import org.mal.ls.MalCompletionItemsTexts;
+import org.mal.ls.MalDebugLogger;
 
 public class MalTextDocumentService implements TextDocumentService {
 
   private MalCompletionItemsTexts texts = new MalCompletionItemsTexts();
+  private MalDebugLogger logger = new MalDebugLogger();
 
   @Override
   public CompletableFuture<Either<List<CompletionItem>, CompletionList>> completion(CompletionParams completionParams) {
     HashMap<String, String> ciHashMap = texts.getciHashMap();
     List<CompletionItem> completionItems = new ArrayList<>();
-    
+
     return CompletableFuture.supplyAsync(() -> {  
-      
+      this.logger.log("TEEEESSSSTTTT");
+
       String key1 = "", key2 = "", key3 = "";
-      
       for (Map.Entry<String, String> ci : ciHashMap.entrySet()) {
         String[] item = ci.getKey().split(".", 2);
         if(item[1] == "text")
