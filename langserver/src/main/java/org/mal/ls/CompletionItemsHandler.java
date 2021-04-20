@@ -8,6 +8,7 @@ import org.mal.ls.completionItems.Asset;
 import org.mal.ls.completionItems.Category;
 import org.mal.ls.completionItems.DeveloperInfo;
 import org.mal.ls.completionItems.Include;
+import org.mal.ls.completionItems.Let;
 import org.mal.ls.completionItems.ModelerInfo;
 import org.mal.ls.completionItems.UserInfo;
 
@@ -20,6 +21,7 @@ public class CompletionItemsHandler {
     private Category category = new Category();
     private DeveloperInfo devInfo = new DeveloperInfo();
     private Include include = new Include();
+    private Let let = new Let();
     private ModelerInfo modInfo = new ModelerInfo();
     private UserInfo usrInfo = new UserInfo();
 
@@ -39,6 +41,9 @@ public class CompletionItemsHandler {
 
         String includeValue[] = {include.getText(), include.getLabel(), include.getInfo()};
         this.ciHashMap.put("include", includeValue);
+
+        String letValue[] = {let.getText(), let.getLabel(), let.getInfo()};
+        this.ciHashMap.put("let", letValue);
 
         String modInfoValue[] = {modInfo.getText(), modInfo.getLabel(), modInfo.getInfo()};
         this.ciHashMap.put("modInfo", modInfoValue);
