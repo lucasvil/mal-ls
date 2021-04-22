@@ -133,7 +133,8 @@ public class Analyzer {
     for (AST.Variable variable : variableReferenceCount.keySet()) {
       int val = variableReferenceCount.get(variable);
       if (val == 0) {
-        LOGGER.warning(variable.name, String.format("Variable '%s' is never used", variable.name.id));
+        // LOGGER.warning(variable.name, String.format("Variable '%s' is never used",
+        // variable.name.id));
       }
     }
 
@@ -149,7 +150,8 @@ public class Analyzer {
         }
       }
       if (onlyZeroRefs) {
-        LOGGER.warning(assoc, String.format("Association '%s' is never used", assoc.toShortString()));
+        // LOGGER.warning(assoc, String.format("Association '%s' is never used",
+        // assoc.toShortString()));
       }
     }
   }
@@ -159,7 +161,7 @@ public class Analyzer {
     for (AST.Define define : ast.getDefines()) {
       AST.Define prevDef = defines.put(define.key.id, define);
       if (prevDef != null) {
-        error(define, String.format("Define '%s' previously defined at %s", define.key.id, prevDef.posString()));
+        error(define, String.format("Define '%s' previously defined at %s", define.key.id, prevDef.locationString()));
       }
     }
     AST.Define id = defines.get("id");
@@ -184,7 +186,8 @@ public class Analyzer {
   private void checkCategories() {
     for (AST.Category category : ast.getCategories()) {
       if (category.assets.isEmpty() && category.meta.isEmpty()) {
-        LOGGER.warning(category.name, String.format("Category '%s' contains no assets or metadata", category.name.id));
+        // LOGGER.warning(category.name, String.format("Category '%s' contains no assets
+        // or metadata", category.name.id));
       }
     }
   }
@@ -224,7 +227,7 @@ public class Analyzer {
         metas.put(meta.type.id, meta);
       } else {
         var prevDef = metas.get(meta.type.id);
-        error(meta, String.format("Metadata %s previously defined at %s", meta.type.id, prevDef.posString()));
+        error(meta, String.format("Metadata %s previously defined at %s", meta.type.id, prevDef.locationString()));
       }
     }
   }
@@ -235,7 +238,7 @@ public class Analyzer {
         if (assets.containsKey(asset.name.id)) {
           AST.Asset prevDef = assets.get(asset.name.id);
           error(asset.name,
-              String.format("Asset '%s' previously defined at %s", asset.name.id, prevDef.name.posString()));
+              String.format("Asset '%s' previously defined at %s", asset.name.id, prevDef.name.locationString()));
         } else {
           assets.put(asset.name.id, asset);
         }
@@ -295,7 +298,8 @@ public class Analyzer {
           }
         }
         if (!found) {
-          LOGGER.warning(parent.name, String.format("Asset '%s' is abstract but never extended to", parent.name.id));
+          // LOGGER.warning(parent.name, String.format("Asset '%s' is abstract but never
+          // extended to", parent.name.id));
         }
       }
     }
@@ -320,8 +324,9 @@ public class Analyzer {
           var cias = new HashSet<AST.CIA>();
           for (var cia : attackStep.cia.get()) {
             if (cias.contains(cia)) {
-              LOGGER.warning(attackStep.name, String.format("Attack step %s.%s contains duplicate classification {%s}",
-                  asset.name.id, attackStep.name.id, cia));
+              // LOGGER.warning(attackStep.name, String.format("Attack step %s.%s contains
+              // duplicate classification {%s}",
+              // asset.name.id, attackStep.name.id, cia));
             } else {
               cias.add(cia);
             }
@@ -457,13 +462,13 @@ public class Analyzer {
               error(attackStep.name,
                   String.format(
                       "Cannot override attack step '%s' previously defined at %s with different type '%s' =/= '%s'",
-                      attackStep.name.id, prevDef.name.posString(), attackStep.type, prevDef.type));
+                      attackStep.name.id, prevDef.name.locationString(), attackStep.type, prevDef.type));
             }
           }
         } else {
           // Attack step is defined in this scope, NOK
-          error(attackStep.name,
-              String.format("Attack step '%s' previously defined at %s", attackStep.name.id, prevDef.name.posString()));
+          error(attackStep.name, String.format("Attack step '%s' previously defined at %s", attackStep.name.id,
+              prevDef.name.locationString()));
         }
       }
     }
@@ -549,7 +554,7 @@ public class Analyzer {
       } else {
         // Field previously defined as attack step
         error(field,
-            String.format("Field '%s' previously defined as attack step at %s", field.id, prevStep.posString()));
+            String.format("Field '%s' previously defined as attack step at %s", field.id, prevStep.locationString()));
       }
     } else {
       // Field previously defined
@@ -560,7 +565,7 @@ public class Analyzer {
         prevField = prevDef.leftField;
       }
       error(field, String.format("Field %s.%s previously defined for asset at %s", parent.name.id, field.id,
-          prevField.posString()));
+          prevField.locationString()));
     }
   }
 
@@ -571,7 +576,7 @@ public class Analyzer {
       scope.add(variable.name.id, variable);
     } else {
       error(variable.name,
-          String.format("Variable '%s' previously defined at %s", variable.name.id, prevDef.name.posString()));
+          String.format("Variable '%s' previously defined at %s", variable.name.id, prevDef.name.locationString()));
     }
   }
 
@@ -803,7 +808,7 @@ public class Analyzer {
       String extra = "";
       var varScope = assetVariables.get(asset.name.id).lookdown(name.id);
       if (varScope != null) {
-        extra = String.format(", did you mean the variable '%s()' defined at %s", name.id, varScope.posString());
+        extra = String.format(", did you mean the variable '%s()' defined at %s", name.id, varScope.locationString());
       }
       error(name, String.format("Field '%s' not defined for asset '%s'%s", name.id, asset.name.id, extra));
       return null;
@@ -844,8 +849,7 @@ public class Analyzer {
     LOGGER.error(msg);
   }
 
-  private void error(Position pos, String msg) {
+  private void error(Location pos, String msg) {
     failed = true;
-    LOGGER.error(pos, msg);
   }
 }

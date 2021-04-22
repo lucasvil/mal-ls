@@ -17,7 +17,7 @@ package org.mal.ls.compiler.lib;
 
 import java.util.List;
 
-public class Token extends Position {
+public class Token extends Location {
   public final TokenType type;
   public final String stringValue;
   public final double doubleValue;
@@ -25,8 +25,8 @@ public class Token extends Position {
   public final List<Token> preComments;
   public final List<Token> postComments;
 
-  public Token(TokenType type, String filename, int line, int col) {
-    super(filename, line, col);
+  public Token(TokenType type, String filename, Position start, Position end) {
+    super(filename, start, end);
     this.type = type;
     this.stringValue = "";
     this.doubleValue = 0.0;
@@ -35,8 +35,8 @@ public class Token extends Position {
     postComments = List.of();
   }
 
-  public Token(TokenType type, String filename, int line, int col, String stringValue) {
-    super(filename, line, col);
+  public Token(TokenType type, String filename, Position start, Position end, String stringValue) {
+    super(filename, start, end);
     this.type = type;
     this.stringValue = stringValue;
     this.doubleValue = 0.0;
@@ -46,7 +46,7 @@ public class Token extends Position {
   }
 
   public Token(Token tok, List<Token> preComments, List<Token> postComments) {
-    super(tok.filename, tok.line, tok.col);
+    super(tok.filename, tok.start, tok.end);
     type = tok.type;
     stringValue = tok.stringValue;
     doubleValue = tok.doubleValue;
@@ -55,8 +55,8 @@ public class Token extends Position {
     this.postComments = postComments;
   }
 
-  public Token(TokenType type, String filename, int line, int col, double doubleValue) {
-    super(filename, line, col);
+  public Token(TokenType type, String filename, Position start, Position end, double doubleValue) {
+    super(filename, start, end);
     this.type = type;
     this.stringValue = "";
     this.doubleValue = doubleValue;
@@ -65,8 +65,8 @@ public class Token extends Position {
     postComments = List.of();
   }
 
-  public Token(TokenType type, String filename, int line, int col, int intValue) {
-    super(filename, line, col);
+  public Token(TokenType type, String filename, Position start, Position end, int intValue) {
+    super(filename, start, end);
     this.type = type;
     this.stringValue = "";
     this.doubleValue = 0.0;
@@ -80,7 +80,7 @@ public class Token extends Position {
     StringBuilder sb = new StringBuilder();
     sb.append(type);
     sb.append(", ");
-    sb.append(posString());
+    sb.append(locationString());
     switch (type) {
     case FLOAT:
       sb.append(", ");
@@ -92,6 +92,7 @@ public class Token extends Position {
       break;
     case ID:
     case STRING:
+    case MISSINGTOKEN:
       sb.append(", ");
       sb.append(stringValue);
       break;

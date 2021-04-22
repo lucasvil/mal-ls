@@ -37,6 +37,7 @@ public class Lexer {
   private List<Byte> lexeme;
   private List<Token> comments = new ArrayList<>();
   private boolean eof;
+  private String missing;
 
   private static Map<String, TokenType> keywords;
 
@@ -176,7 +177,7 @@ public class Lexer {
         consume();
         return createToken(TokenType.NOTEXIST);
       } else {
-        throw exception("Expected 'E'");
+        return createToken(TokenType.SKIPPEDTOKEN);
       }
     case '@':
       return createToken(TokenType.AT);
@@ -198,7 +199,7 @@ public class Lexer {
         consume();
         return createToken(TokenType.REQUIRE);
       } else {
-        throw exception("Expected '-' or '--'");
+        return createToken(TokenType.SKIPPEDTOKEN);
       }
     case '=':
       return createToken(TokenType.ASSIGN);
@@ -207,7 +208,7 @@ public class Lexer {
         consume();
         return createToken(TokenType.UNION);
       } else {
-        throw exception("Expected '/'");
+        return createToken(TokenType.SKIPPEDTOKEN);
       }
     case '/':
       if (peek('\\')) {
@@ -223,8 +224,8 @@ public class Lexer {
         consume();
         while (!peek("*/")) {
           if (eof) {
-            throw exception(
-                String.format("Unterminated comment starting at %s", new Position(filename, startLine, startCol)));
+            createComment(TokenType.MULTICOMMENT);
+            return next();
           }
           consume();
         }
@@ -246,12 +247,19 @@ public class Lexer {
     case '^':
       return createToken(TokenType.POWER);
     case '"':
+      boolean syntacticallyCorrect = true;
       while (!peek('"')) {
+        if (syntacticallyCorrect) {
+          if (peek('\n')) {
+            missing = String.format("String literal is not properly closed at %s", new Position(startLine, startCol));
+            syntacticallyCorrect = false;
+          }
+        }
         if (peek('\\')) {
           consume();
-          if (eof || peek('\n')) {
-            throw exception(
-                String.format("Unterminated string starting at %s", new Position(filename, startLine, startCol)));
+          if (eof) {
+            missing = String.format("Unterminated string starting at %s", new Position(startLine, startCol));
+            return createToken(TokenType.MISSINGTOKEN);
           }
           if (input[index] < 32 || input[index] > 126) {
             throw exception(String.format("Invalid escape byte 0x%02X", input[index]));
@@ -264,15 +272,19 @@ public class Lexer {
             throw exception(String.format("Invalid escape sequence '%s'", escapeSequence));
           }
           lexeme.add(escapeSequences.get(escapeSequence));
-        } else if (eof || peek('\n')) {
-          throw exception(
-              String.format("Unterminated string starting at %s", new Position(filename, startLine, startCol)));
+        } else if (eof) {
+          missing = String.format("Unterminated string starting at %s", new Position(startLine, startCol));
+          return createToken(TokenType.MISSINGTOKEN);
         } else {
           consume();
         }
       }
       consume();
-      return createToken(TokenType.STRING);
+      if (syntacticallyCorrect) {
+        return createToken(TokenType.STRING);
+      } else {
+        return createToken(TokenType.MISSINGTOKEN);
+      }
     default:
       if (isAlpha(c)) {
         while (isAlphaNumeric()) {
@@ -299,9 +311,9 @@ public class Lexer {
         }
       }
       if (c < 0) {
-        throw exception(String.format("Unexpected token 0x%02X", c));
+        return createToken(TokenType.SKIPPEDTOKEN);
       } else {
-        throw exception(String.format("Unexpected token '%c'", (char) c));
+        return createToken(TokenType.SKIPPEDTOKEN);
       }
     }
   }
@@ -361,22 +373,27 @@ public class Lexer {
     if (type == TokenType.MULTICOMMENT) {
       lexemeString = lexemeString.substring(0, lexemeString.length() - 2);
     }
-    comments.add(new Token(type, filename, startLine, startCol, lexemeString));
+    comments.add(new Token(type, filename, new Position(startLine, startCol), new Position(line, col), lexemeString));
   }
 
   private Token createRawToken(TokenType type) {
     switch (type) {
     case INT:
-      return new Token(type, filename, startLine, startCol, Integer.parseInt(getLexemeString()));
+      return new Token(type, filename, new Position(startLine, startCol), new Position(line, col),
+          Integer.parseInt(getLexemeString()));
     case FLOAT:
-      return new Token(type, filename, startLine, startCol, Double.parseDouble(getLexemeString()));
+      return new Token(type, filename, new Position(startLine, startCol), new Position(line, col),
+          Double.parseDouble(getLexemeString()));
     case ID:
-      return new Token(type, filename, startLine, startCol, getLexemeString());
+      return new Token(type, filename, new Position(startLine, startCol), new Position(line, col), getLexemeString());
     case STRING:
       var lexemeString = getLexemeString();
-      return new Token(type, filename, startLine, startCol, lexemeString.substring(1, lexemeString.length() - 1));
+      return new Token(type, filename, new Position(startLine, startCol), new Position(line, col),
+          lexemeString.substring(1, lexemeString.length() - 1));
+    case MISSINGTOKEN:
+      return new Token(type, filename, new Position(startLine, startCol), new Position(line, col), missing);
     default:
-      return new Token(type, filename, startLine, startCol);
+      return new Token(type, filename, new Position(startLine, startCol), new Position(line, col));
     }
   }
 
@@ -414,8 +431,7 @@ public class Lexer {
         consume();
         while (!peek("*/")) {
           if (eof) {
-            throw exception(
-                String.format("Unterminated comment starting at %s", new Position(filename, startLine, startCol)));
+            throw exception(String.format("Unterminated comment starting at %s", new Position(startLine, startCol)));
           }
           consume();
         }
@@ -446,9 +462,9 @@ public class Lexer {
   private CompilerException exception(String msg) {
     Position pos = null;
     if (eof) {
-      pos = new Position(filename, line, col);
+      pos = new Position(line, col);
     } else {
-      pos = new Position(filename, startLine, startCol);
+      pos = new Position(startLine, startCol);
     }
     LOGGER.error(pos, msg);
     LOGGER.print();

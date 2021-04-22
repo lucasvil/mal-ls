@@ -16,24 +16,21 @@
 package org.mal.ls.compiler.lib;
 
 public class Position implements Comparable<Position> {
-  public final String filename;
   public final int line;
   public final int col;
 
-  public Position(String filename, int line, int col) {
-    this.filename = filename;
+  public Position(int line, int col) {
     this.line = line;
     this.col = col;
   }
 
   public Position(Position pos) {
-    this.filename = pos.filename;
     this.line = pos.line;
     this.col = pos.col;
   }
 
   public String posString() {
-    return String.format("<%s:%d:%d>", filename, line, col);
+    return String.format("<%d:%d>", line, col);
   }
 
   @Override
@@ -50,16 +47,12 @@ public class Position implements Comparable<Position> {
       return false;
     }
     var other = (Position) obj;
-    return this.filename.equals(other.filename) && this.line == other.line && this.col == other.col;
+    return this.line == other.line && this.col == other.col;
   }
 
   @Override
   public int compareTo(Position o) {
-    int cmp = this.filename.compareTo(o.filename);
-    if (cmp != 0) {
-      return cmp;
-    }
-    cmp = Integer.compare(this.line, o.line);
+    int cmp = Integer.compare(this.line, o.line);
     if (cmp != 0) {
       return cmp;
     }

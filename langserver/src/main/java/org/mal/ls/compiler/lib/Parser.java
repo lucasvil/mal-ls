@@ -744,8 +744,7 @@ public class Parser {
     return exception(tok, msg);
   }
 
-  private CompilerException exception(Position pos, String msg) {
-    LOGGER.error(pos, msg);
+  private CompilerException exception(Location location, String msg) {
     return new CompilerException("There were syntax errors");
   }
 
