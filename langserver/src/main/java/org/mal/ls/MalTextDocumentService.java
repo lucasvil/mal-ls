@@ -50,6 +50,9 @@ public class MalTextDocumentService implements TextDocumentService {
   private CompletionItemsHandler texts = new CompletionItemsHandler();
   private MalDebugLogger logger = new MalDebugLogger();
 
+  /**
+   * Creates and returns a of completion items 
+   */
   @Override
   public CompletableFuture<Either<List<CompletionItem>, CompletionList>> completion(CompletionParams completionParams) {
     HashMap<String, String[]> ciHashMap = texts.getciHashMap();

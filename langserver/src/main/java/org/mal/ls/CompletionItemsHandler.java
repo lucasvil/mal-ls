@@ -1,3 +1,6 @@
+/** 
+ * This class handles the instences of completion items
+ */
 package org.mal.ls;
 
 import java.util.Arrays;
@@ -52,6 +55,9 @@ public class CompletionItemsHandler {
         this.ciHashMap.put("usrInfo", usrInfoValue);
     }
 
+    /**
+     * Returns the created hashmap containing all the completion item related texts
+     */
     public HashMap<String, String[]> getciHashMap() {
         return this.ciHashMap;
     }
