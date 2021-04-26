@@ -1,7 +1,5 @@
 package org.mal.ls;
 
-import java.io.*;
-
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -48,7 +46,6 @@ import org.mal.ls.MalDebugLogger;
 public class MalTextDocumentService implements TextDocumentService {
 
   private CompletionItemsHandler texts = new CompletionItemsHandler();
-  private MalDebugLogger logger = new MalDebugLogger();
 
   /**
    * Creates and returns a of completion items 
