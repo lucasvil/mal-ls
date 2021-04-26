@@ -27,7 +27,7 @@ public enum TokenType {
   REQUIRE("'<-'"), ASSIGN("'='"), UNION("'\\/'"), INTERSECT("'/\\'"), DOT("'.'"), RANGE("'..'"), STAR("'*'"),
   PLUS("'+'"), MINUS("'-'"), DIVIDE("'/'"), POWER("'^'"), LARROW("'<--'"), RARROW("'-->'"),
 
-  SKIPPEDTOKEN("skipped token"), MISSINGTOKEN("missing token");
+  UNRECOGNIZEDTOKEN("unrecognized token");
 
   private final String string;
 

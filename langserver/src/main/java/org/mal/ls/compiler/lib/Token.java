@@ -24,6 +24,7 @@ public class Token extends Location {
   public final int intValue;
   public final List<Token> preComments;
   public final List<Token> postComments;
+  public final List<SyntaxError> errors;
 
   public Token(TokenType type, String filename, Position start, Position end) {
     super(filename, start, end);
@@ -33,6 +34,18 @@ public class Token extends Location {
     this.intValue = 0;
     preComments = List.of();
     postComments = List.of();
+    this.errors = List.of();
+  }
+
+  public Token(TokenType type, String filename, Position start, Position end, List<SyntaxError> errors) {
+    super(filename, start, end);
+    this.type = type;
+    this.stringValue = "";
+    this.doubleValue = 0.0;
+    this.intValue = 0;
+    preComments = List.of();
+    postComments = List.of();
+    this.errors = errors;
   }
 
   public Token(TokenType type, String filename, Position start, Position end, String stringValue) {
@@ -43,6 +56,20 @@ public class Token extends Location {
     this.intValue = 0;
     preComments = List.of();
     postComments = List.of();
+    this.errors = List.of();
+  }
+
+  public Token(TokenType type, String filename, Position start, Position end, String stringValue,
+      List<SyntaxError> errors) {
+    super(filename, start, end);
+    System.err.println("Token constructor: " + errors.size());
+    this.type = type;
+    this.stringValue = stringValue;
+    this.doubleValue = 0.0;
+    this.intValue = 0;
+    preComments = List.of();
+    postComments = List.of();
+    this.errors = errors;
   }
 
   public Token(Token tok, List<Token> preComments, List<Token> postComments) {
@@ -53,6 +80,7 @@ public class Token extends Location {
     intValue = tok.intValue;
     this.preComments = preComments;
     this.postComments = postComments;
+    this.errors = tok.errors;
   }
 
   public Token(TokenType type, String filename, Position start, Position end, double doubleValue) {
@@ -63,6 +91,7 @@ public class Token extends Location {
     this.intValue = 0;
     preComments = List.of();
     postComments = List.of();
+    this.errors = List.of();
   }
 
   public Token(TokenType type, String filename, Position start, Position end, int intValue) {
@@ -73,6 +102,7 @@ public class Token extends Location {
     this.intValue = intValue;
     preComments = List.of();
     postComments = List.of();
+    this.errors = List.of();
   }
 
   @Override
@@ -92,13 +122,14 @@ public class Token extends Location {
       break;
     case ID:
     case STRING:
-    case MISSINGTOKEN:
       sb.append(", ");
       sb.append(stringValue);
       break;
     default:
       break;
     }
+    sb.append(", Errors: ");
+    sb.append(errors.size());
     return sb.toString();
   }
 }
