@@ -1,13 +1,13 @@
 /** 
- * This class represents the completion item modeler info
+ * This class represents the completion item let
  */
 package org.mal.ls.completionItems;
 
-public class ModelerInfo {
-    private final String text = "modeler info: \"\"";
-    private final String label = "modeler info";
-    private final String info = "Provides information to modellers or parser developers. It can be used to communicate assumptions or parsing requirements, which might otherwise be ambiguous";
-
+public class Let {
+    private final String text = "let ";
+    private final String label = "let";
+    private final String info = "This keyword is used to associate a given expression with a specific reusable name.";
+    
     /** 
      * Returns the premade text when selecting the completion item 
      */

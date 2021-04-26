@@ -1,4 +1,3 @@
-import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.concurrent.ExecutionException;
@@ -6,8 +5,6 @@ import java.util.concurrent.Future;
 import java.util.logging.Level;
 import java.util.logging.LogManager;
 import java.util.logging.Logger;
-import java.util.logging.FileHandler;
-import java.util.logging.SimpleFormatter;
 
 import org.eclipse.lsp4j.jsonrpc.Launcher;
 import org.eclipse.lsp4j.launch.LSPLauncher;
