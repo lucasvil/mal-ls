@@ -1,13 +1,10 @@
 package org.mal.ls;
 
-import java.io.*;
-
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.HashMap;
 import java.util.concurrent.CompletableFuture;
-import java.util.logging.Logger;
 
 import org.eclipse.lsp4j.CodeAction;
 import org.eclipse.lsp4j.CodeActionParams;
@@ -41,14 +38,20 @@ import org.eclipse.lsp4j.TextEdit;
 import org.eclipse.lsp4j.WorkspaceEdit;
 import org.eclipse.lsp4j.jsonrpc.messages.Either;
 import org.eclipse.lsp4j.services.TextDocumentService;
-
-import org.mal.ls.CompletionItemsHandler;
-import org.mal.ls.MalDebugLogger;
+import org.mal.ls.context.DocumentContext;
+import org.mal.ls.context.DocumentContextKeys;
+import org.mal.ls.diagnostic.DiagnosticService;
 
 public class MalTextDocumentService implements TextDocumentService {
+  private MalLanguageServer server;
+  private DocumentContext context;
+
+  public MalTextDocumentService(MalLanguageServer server) {
+    this.server = server;
+    this.context = new DocumentContext();
+  }
 
   private CompletionItemsHandler texts = new CompletionItemsHandler();
-  private MalDebugLogger logger = new MalDebugLogger();
 
   @Override
   public CompletableFuture<Either<List<CompletionItem>, CompletionList>> completion(CompletionParams completionParams) {
@@ -60,9 +63,8 @@ public class MalTextDocumentService implements TextDocumentService {
       for (Map.Entry<String, String[]> ci : ciHashMap.entrySet()) {
         String key = ci.getKey();
         String value[] = ciHashMap.get(key);
-        completionItems.add(addCompetionItem(value[0], value[1], value[2]));      
+        completionItems.add(addCompetionItem(value[0], value[1], value[2]));
       }
-
       return Either.forLeft(completionItems);
     });
   }
@@ -146,22 +148,23 @@ public class MalTextDocumentService implements TextDocumentService {
   }
 
   @Override
-  public void didOpen(DidOpenTextDocumentParams didOpenTextDocumentParams) {
-
+  public void didOpen(DidOpenTextDocumentParams params) {
+    context.put(DocumentContextKeys.URI_KEY, params.getTextDocument().getUri());
+    server.getClient().publishDiagnostics(DiagnosticService.getDiagnosticsParams(context));
   }
 
   @Override
-  public void didChange(DidChangeTextDocumentParams didChangeTextDocumentParams) {
-
+  public void didChange(DidChangeTextDocumentParams params) {
+    server.getClient().publishDiagnostics(DiagnosticService.getDiagnosticsParams(context));
   }
 
   @Override
   public void didClose(DidCloseTextDocumentParams didCloseTextDocumentParams) {
-
+    DiagnosticService.clearDiagnostics(server.getClient());
   }
 
   @Override
   public void didSave(DidSaveTextDocumentParams didSaveTextDocumentParams) {
-
+    server.getClient().publishDiagnostics(DiagnosticService.getDiagnosticsParams(context));
   }
 }
