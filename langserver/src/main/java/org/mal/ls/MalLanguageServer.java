@@ -20,7 +20,7 @@ public class MalLanguageServer implements LanguageServer, LanguageClientAware {
   private int errorCode = 1;
 
   public MalLanguageServer() {
-    this.textDocumentService = new MalTextDocumentService();
+    this.textDocumentService = new MalTextDocumentService(this);
     this.workspaceService = new MalWorkspaceService();
   }
 
@@ -58,5 +58,9 @@ public class MalLanguageServer implements LanguageServer, LanguageClientAware {
   @Override
   public void connect(LanguageClient languageClient) {
     this.client = languageClient;
+  }
+
+  public LanguageClient getClient() {
+    return this.client;
   }
 }

@@ -35,6 +35,7 @@ public class Lexer {
   private int startLine;
   private int startCol;
   private List<Byte> lexeme;
+  private List<SyntaxError> errors;
   private List<Token> comments = new ArrayList<>();
   private boolean eof;
 
@@ -131,6 +132,7 @@ public class Lexer {
     startLine = line;
     startCol = col;
     lexeme = new ArrayList<>();
+    errors = new ArrayList<>();
     if (eof) {
       LOGGER.print();
       return createToken(TokenType.EOF);
@@ -176,7 +178,7 @@ public class Lexer {
         consume();
         return createToken(TokenType.NOTEXIST);
       } else {
-        throw exception("Expected 'E'");
+        return createToken(TokenType.UNRECOGNIZEDTOKEN);
       }
     case '@':
       return createToken(TokenType.AT);
@@ -198,7 +200,7 @@ public class Lexer {
         consume();
         return createToken(TokenType.REQUIRE);
       } else {
-        throw exception("Expected '-' or '--'");
+        return createToken(TokenType.UNRECOGNIZEDTOKEN);
       }
     case '=':
       return createToken(TokenType.ASSIGN);
@@ -207,7 +209,7 @@ public class Lexer {
         consume();
         return createToken(TokenType.UNION);
       } else {
-        throw exception("Expected '/'");
+        return createToken(TokenType.UNRECOGNIZEDTOKEN);
       }
     case '/':
       if (peek('\\')) {
@@ -223,8 +225,8 @@ public class Lexer {
         consume();
         while (!peek("*/")) {
           if (eof) {
-            throw exception(
-                String.format("Unterminated comment starting at %s", new Position(filename, startLine, startCol)));
+            createComment(TokenType.MULTICOMMENT);
+            return next();
           }
           consume();
         }
@@ -246,32 +248,48 @@ public class Lexer {
     case '^':
       return createToken(TokenType.POWER);
     case '"':
+      boolean closed = true;
+      boolean invalidEscape = false;
       while (!peek('"')) {
+        if (closed) {
+          if (peek('\n')) {
+            closed = false;
+          }
+        }
         if (peek('\\')) {
           consume();
-          if (eof || peek('\n')) {
-            throw exception(
-                String.format("Unterminated string starting at %s", new Position(filename, startLine, startCol)));
+          if (eof) {
+            // Unterminated string starting at %s, new Position(startLine, startCol)
+            errors.add(new SyntaxError(SyntaxErrorType.UNTERMINATEDSTRING));
+            return createToken(TokenType.STRING);
           }
           if (input[index] < 32 || input[index] > 126) {
             throw exception(String.format("Invalid escape byte 0x%02X", input[index]));
           }
           consume();
-          var lexemeString = getLexemeString();
-          String escapeSequence = lexemeString.substring(lexemeString.length() - 2);
-          lexeme = lexeme.subList(0, lexeme.size() - 2);
-          if (!escapeSequences.containsKey(escapeSequence)) {
-            throw exception(String.format("Invalid escape sequence '%s'", escapeSequence));
+          if (!invalidEscape) {
+            var lexemeString = getLexemeString();
+            String escapeSequence = lexemeString.substring(lexemeString.length() - 2);
+            // lexeme = lexeme.subList(0, lexeme.size() - 2);
+            if (!escapeSequences.containsKey(escapeSequence)) {
+              // Invalid escape sequence '%s'", escapeSequence; }
+              errors.add(new SyntaxError(SyntaxErrorType.INVALIDESCAPESEQUENCE));
+            }
+            invalidEscape = true;
           }
-          lexeme.add(escapeSequences.get(escapeSequence));
-        } else if (eof || peek('\n')) {
-          throw exception(
-              String.format("Unterminated string starting at %s", new Position(filename, startLine, startCol)));
+          // lexeme.add(escapeSequences.get(escapeSequence));
+        } else if (eof) {
+          // Unterminated string starting at %s, new Position(startLine, startCol)
+          errors.add(new SyntaxError(SyntaxErrorType.UNTERMINATEDSTRING));
+          return createToken(TokenType.STRING);
         } else {
           consume();
         }
       }
       consume();
+      if (!closed) {
+        errors.add(new SyntaxError(SyntaxErrorType.UNTERMINATEDSTRING));
+      }
       return createToken(TokenType.STRING);
     default:
       if (isAlpha(c)) {
@@ -299,9 +317,9 @@ public class Lexer {
         }
       }
       if (c < 0) {
-        throw exception(String.format("Unexpected token 0x%02X", c));
+        return createToken(TokenType.UNRECOGNIZEDTOKEN);
       } else {
-        throw exception(String.format("Unexpected token '%c'", (char) c));
+        return createToken(TokenType.UNRECOGNIZEDTOKEN);
       }
     }
   }
@@ -361,22 +379,26 @@ public class Lexer {
     if (type == TokenType.MULTICOMMENT) {
       lexemeString = lexemeString.substring(0, lexemeString.length() - 2);
     }
-    comments.add(new Token(type, filename, startLine, startCol, lexemeString));
+    comments.add(new Token(type, filename, new Position(startLine, startCol), new Position(line, col), lexemeString));
   }
 
   private Token createRawToken(TokenType type) {
     switch (type) {
     case INT:
-      return new Token(type, filename, startLine, startCol, Integer.parseInt(getLexemeString()));
+      return new Token(type, filename, new Position(startLine, startCol), new Position(line, col),
+          Integer.parseInt(getLexemeString()));
     case FLOAT:
-      return new Token(type, filename, startLine, startCol, Double.parseDouble(getLexemeString()));
+      return new Token(type, filename, new Position(startLine, startCol), new Position(line, col),
+          Double.parseDouble(getLexemeString()));
     case ID:
-      return new Token(type, filename, startLine, startCol, getLexemeString());
+    case UNRECOGNIZEDTOKEN:
+      return new Token(type, filename, new Position(startLine, startCol), new Position(line, col), getLexemeString());
     case STRING:
       var lexemeString = getLexemeString();
-      return new Token(type, filename, startLine, startCol, lexemeString.substring(1, lexemeString.length() - 1));
+      return new Token(type, filename, new Position(startLine, startCol), new Position(line, col),
+          lexemeString.substring(1, lexemeString.length() - 1), errors);
     default:
-      return new Token(type, filename, startLine, startCol);
+      return new Token(type, filename, new Position(startLine, startCol), new Position(line, col));
     }
   }
 
@@ -414,8 +436,7 @@ public class Lexer {
         consume();
         while (!peek("*/")) {
           if (eof) {
-            throw exception(
-                String.format("Unterminated comment starting at %s", new Position(filename, startLine, startCol)));
+            return;
           }
           consume();
         }
@@ -446,9 +467,9 @@ public class Lexer {
   private CompilerException exception(String msg) {
     Position pos = null;
     if (eof) {
-      pos = new Position(filename, line, col);
+      pos = new Position(line, col);
     } else {
-      pos = new Position(filename, startLine, startCol);
+      pos = new Position(startLine, startCol);
     }
     LOGGER.error(pos, msg);
     LOGGER.print();

@@ -69,25 +69,25 @@ public class AST {
     this.defines.add(define);
   }
 
-  public static class ID extends Position {
+  public static class ID extends Location {
     public final String id;
 
-    public ID(Position pos, String id) {
+    public ID(Location pos, String id) {
       super(pos);
       this.id = id;
     }
 
     @Override
     public String toString() {
-      return String.format("ID(%s, \"%s\")", posString(), id);
+      return String.format("ID(%s, \"%s\")", locationString(), id);
     }
   }
 
-  public static class Define extends Position {
+  public static class Define extends Location {
     public final ID key;
     public final String value;
 
-    public Define(Position pos, ID key, String value) {
+    public Define(Location pos, ID key, String value) {
       super(pos);
       this.key = key;
       this.value = value;
@@ -95,7 +95,7 @@ public class AST {
 
     @Override
     public String toString() {
-      return String.format("Define(%s, %s, \"%s\")", posString(), key.toString(), value);
+      return String.format("Define(%s, %s, \"%s\")", locationString(), key.toString(), value);
     }
 
     public static String listToString(List<Define> defines, int spaces) {
@@ -114,11 +114,11 @@ public class AST {
     }
   }
 
-  public static class Meta extends Position {
+  public static class Meta extends Location {
     public final ID type;
     public final String string;
 
-    public Meta(Position pos, ID type, String string) {
+    public Meta(Location pos, ID type, String string) {
       super(pos);
       this.type = type;
       this.string = string;
@@ -126,7 +126,7 @@ public class AST {
 
     @Override
     public String toString() {
-      return String.format("Meta(%s, %s, \"%s\")", posString(), type.toString(), string);
+      return String.format("Meta(%s, %s, \"%s\")", locationString(), type.toString(), string);
     }
 
     public static String listToString(List<Meta> meta, int spaces) {
@@ -145,12 +145,12 @@ public class AST {
     }
   }
 
-  public static class Category extends Position {
+  public static class Category extends Location {
     public final ID name;
     public final List<Meta> meta;
     public final List<Asset> assets;
 
-    public Category(Position pos, ID name, List<Meta> meta, List<Asset> assets) {
+    public Category(Location pos, ID name, List<Meta> meta, List<Asset> assets) {
       super(pos);
       this.name = name;
       this.meta = meta;
@@ -160,7 +160,7 @@ public class AST {
     public String toString(int spaces) {
       var indent = " ".repeat(spaces);
       var sb = new StringBuilder();
-      sb.append(String.format("%sCategory(%s, %s,%n", indent, posString(), name.toString()));
+      sb.append(String.format("%sCategory(%s, %s,%n", indent, locationString(), name.toString()));
       sb.append(String.format("%s,%n", Meta.listToString(meta, spaces + 2)));
       sb.append(String.format("%s%n", Asset.listToString(assets, spaces + 2)));
       sb.append(String.format("%s)", indent));
@@ -183,7 +183,7 @@ public class AST {
     }
   }
 
-  public static class Asset extends Position {
+  public static class Asset extends Location {
     public final boolean isAbstract;
     public final ID name;
     public final Optional<ID> parent;
@@ -191,7 +191,7 @@ public class AST {
     public final List<AttackStep> attackSteps;
     public final List<Variable> variables;
 
-    public Asset(Position pos, boolean isAbstract, ID name, Optional<ID> parent, List<Meta> meta,
+    public Asset(Location pos, boolean isAbstract, ID name, Optional<ID> parent, List<Meta> meta,
         List<AttackStep> attackSteps, List<Variable> variables) {
       super(pos);
       this.isAbstract = isAbstract;
@@ -206,7 +206,7 @@ public class AST {
       var indent = " ".repeat(spaces);
       var sb = new StringBuilder();
       sb.append(
-          String.format("%sAsset(%s, %s, %s, %s,%n", indent, posString(), isAbstract ? "ABSTRACT" : "NOT_ABSTRACT",
+          String.format("%sAsset(%s, %s, %s, %s,%n", indent, locationString(), isAbstract ? "ABSTRACT" : "NOT_ABSTRACT",
               name.toString(), parent.isEmpty() ? "NO_PARENT" : String.format("PARENT(%s)", parent.get().toString())));
       sb.append(String.format("%s,%n", Meta.listToString(meta, spaces + 2)));
       sb.append(String.format("%s,%n", AttackStep.listToString(attackSteps, spaces + 2)));
@@ -235,7 +235,7 @@ public class AST {
     ALL, ANY, DEFENSE, EXIST, NOTEXIST
   }
 
-  public static class AttackStep extends Position {
+  public static class AttackStep extends Location {
     public final AttackStepType type;
     public final ID name;
     public final List<ID> tags;
@@ -245,7 +245,7 @@ public class AST {
     public final Optional<Requires> requires;
     public final Optional<Reaches> reaches;
 
-    public AttackStep(Position pos, AttackStepType type, ID name, List<ID> tags, Optional<List<CIA>> cia,
+    public AttackStep(Location pos, AttackStepType type, ID name, List<ID> tags, Optional<List<CIA>> cia,
         Optional<TTCExpr> ttc, List<Meta> meta, Optional<Requires> requires, Optional<Reaches> reaches) {
       super(pos);
       this.type = type;
@@ -261,7 +261,7 @@ public class AST {
     public String toString(int spaces) {
       var indent = " ".repeat(spaces);
       var sb = new StringBuilder();
-      sb.append(String.format("%sAttackStep(%s, %s, %s,%n", indent, posString(), type.name(), name.toString()));
+      sb.append(String.format("%sAttackStep(%s, %s, %s,%n", indent, locationString(), type.name(), name.toString()));
       sb.append(String.format("%s  tags = {", indent));
       for (int i = 0; i < tags.size(); i++) {
         if (i > 0) {
@@ -326,8 +326,8 @@ public class AST {
     }
   }
 
-  public abstract static class TTCExpr extends Position {
-    public TTCExpr(Position pos) {
+  public abstract static class TTCExpr extends Location {
+    public TTCExpr(Location pos) {
       super(pos);
     }
   }
@@ -336,7 +336,7 @@ public class AST {
     public final TTCExpr lhs;
     public final TTCExpr rhs;
 
-    public TTCBinaryExpr(Position pos, TTCExpr lhs, TTCExpr rhs) {
+    public TTCBinaryExpr(Location pos, TTCExpr lhs, TTCExpr rhs) {
       super(pos);
       this.lhs = lhs;
       this.rhs = rhs;
@@ -344,57 +344,57 @@ public class AST {
   }
 
   public static class TTCAddExpr extends TTCBinaryExpr {
-    public TTCAddExpr(Position pos, TTCExpr lhs, TTCExpr rhs) {
+    public TTCAddExpr(Location pos, TTCExpr lhs, TTCExpr rhs) {
       super(pos, lhs, rhs);
     }
 
     @Override
     public String toString() {
-      return String.format("TTCAddExpr(%s, %s, %s)", posString(), lhs.toString(), rhs.toString());
+      return String.format("TTCAddExpr(%s, %s, %s)", locationString(), lhs.toString(), rhs.toString());
     }
   }
 
   public static class TTCSubExpr extends TTCBinaryExpr {
-    public TTCSubExpr(Position pos, TTCExpr lhs, TTCExpr rhs) {
+    public TTCSubExpr(Location pos, TTCExpr lhs, TTCExpr rhs) {
       super(pos, lhs, rhs);
     }
 
     @Override
     public String toString() {
-      return String.format("TTCSubExpr(%s, %s, %s)", posString(), lhs.toString(), rhs.toString());
+      return String.format("TTCSubExpr(%s, %s, %s)", locationString(), lhs.toString(), rhs.toString());
     }
   }
 
   public static class TTCMulExpr extends TTCBinaryExpr {
-    public TTCMulExpr(Position pos, TTCExpr lhs, TTCExpr rhs) {
+    public TTCMulExpr(Location pos, TTCExpr lhs, TTCExpr rhs) {
       super(pos, lhs, rhs);
     }
 
     @Override
     public String toString() {
-      return String.format("TTCMulExpr(%s, %s, %s)", posString(), lhs.toString(), rhs.toString());
+      return String.format("TTCMulExpr(%s, %s, %s)", locationString(), lhs.toString(), rhs.toString());
     }
   }
 
   public static class TTCDivExpr extends TTCBinaryExpr {
-    public TTCDivExpr(Position pos, TTCExpr lhs, TTCExpr rhs) {
+    public TTCDivExpr(Location pos, TTCExpr lhs, TTCExpr rhs) {
       super(pos, lhs, rhs);
     }
 
     @Override
     public String toString() {
-      return String.format("TTCDivExpr(%s, %s, %s)", posString(), lhs.toString(), rhs.toString());
+      return String.format("TTCDivExpr(%s, %s, %s)", locationString(), lhs.toString(), rhs.toString());
     }
   }
 
   public static class TTCPowExpr extends TTCBinaryExpr {
-    public TTCPowExpr(Position pos, TTCExpr lhs, TTCExpr rhs) {
+    public TTCPowExpr(Location pos, TTCExpr lhs, TTCExpr rhs) {
       super(pos, lhs, rhs);
     }
 
     @Override
     public String toString() {
-      return String.format("TTCPowExpr(%s, %s, %s)", posString(), lhs.toString(), rhs.toString());
+      return String.format("TTCPowExpr(%s, %s, %s)", locationString(), lhs.toString(), rhs.toString());
     }
   }
 
@@ -402,7 +402,7 @@ public class AST {
     public final ID name;
     public final List<Double> params;
 
-    public TTCFuncExpr(Position pos, ID name, List<Double> params) {
+    public TTCFuncExpr(Location pos, ID name, List<Double> params) {
       super(pos);
       this.name = name;
       this.params = params;
@@ -411,7 +411,7 @@ public class AST {
     @Override
     public String toString() {
       var sb = new StringBuilder();
-      sb.append(String.format("TTCFuncExpr(%s, %s", posString(), name.toString()));
+      sb.append(String.format("TTCFuncExpr(%s, %s", locationString(), name.toString()));
       for (var p : params) {
         sb.append(String.format(", %f", p));
       }
@@ -423,21 +423,21 @@ public class AST {
   public static class TTCNumExpr extends TTCExpr {
     public final double value;
 
-    public TTCNumExpr(Position pos, double value) {
+    public TTCNumExpr(Location pos, double value) {
       super(pos);
       this.value = value;
     }
 
     @Override
     public String toString() {
-      return String.format("TTCNumExpr(%s, %f)", posString(), value);
+      return String.format("TTCNumExpr(%s, %f)", locationString(), value);
     }
   }
 
-  public static class Requires extends Position {
+  public static class Requires extends Location {
     public final List<Expr> requires;
 
-    public Requires(Position pos, List<Expr> requires) {
+    public Requires(Location pos, List<Expr> requires) {
       super(pos);
       this.requires = requires;
     }
@@ -445,18 +445,18 @@ public class AST {
     public String toString(int spaces) {
       var indent = " ".repeat(spaces);
       var sb = new StringBuilder();
-      sb.append(String.format("%sRequires(%s,%n", indent, posString()));
+      sb.append(String.format("%sRequires(%s,%n", indent, locationString()));
       sb.append(String.format("%s%n", Expr.listToString(requires, "requires", spaces + 2)));
       sb.append(String.format("%s)", indent));
       return sb.toString();
     }
   }
 
-  public static class Reaches extends Position {
+  public static class Reaches extends Location {
     public final boolean inherits;
     public final List<Expr> reaches;
 
-    public Reaches(Position pos, boolean inherits, List<Expr> reaches) {
+    public Reaches(Location pos, boolean inherits, List<Expr> reaches) {
       super(pos);
       this.inherits = inherits;
       this.reaches = reaches;
@@ -465,18 +465,18 @@ public class AST {
     public String toString(int spaces) {
       var indent = " ".repeat(spaces);
       var sb = new StringBuilder();
-      sb.append(String.format("%sReaches(%s, %s,%n", indent, posString(), inherits ? "INHERITS" : "OVERRIDES"));
+      sb.append(String.format("%sReaches(%s, %s,%n", indent, locationString(), inherits ? "INHERITS" : "OVERRIDES"));
       sb.append(String.format("%s%n", Expr.listToString(reaches, "reaches", spaces + 2)));
       sb.append(String.format("%s)", indent));
       return sb.toString();
     }
   }
 
-  public static class Variable extends Position {
+  public static class Variable extends Location {
     public final ID name;
     public final Expr expr;
 
-    public Variable(Position pos, ID name, Expr expr) {
+    public Variable(Location pos, ID name, Expr expr) {
       super(pos);
       this.name = name;
       this.expr = expr;
@@ -484,7 +484,7 @@ public class AST {
 
     @Override
     public String toString() {
-      return String.format("Variable(%s, %s, %s)", posString(), name.toString(), expr.toString());
+      return String.format("Variable(%s, %s, %s)", locationString(), name.toString(), expr.toString());
     }
 
     public static String listToString(List<Variable> variables, int spaces) {
@@ -503,8 +503,8 @@ public class AST {
     }
   }
 
-  public abstract static class Expr extends Position {
-    public Expr(Position pos) {
+  public abstract static class Expr extends Location {
+    public Expr(Location pos) {
       super(pos);
     }
 
@@ -528,7 +528,7 @@ public class AST {
     public final Expr lhs;
     public final Expr rhs;
 
-    public BinaryExpr(Position pos, Expr lhs, Expr rhs) {
+    public BinaryExpr(Location pos, Expr lhs, Expr rhs) {
       super(pos);
       this.lhs = lhs;
       this.rhs = rhs;
@@ -536,112 +536,112 @@ public class AST {
   }
 
   public static class UnionExpr extends BinaryExpr {
-    public UnionExpr(Position pos, Expr lhs, Expr rhs) {
+    public UnionExpr(Location pos, Expr lhs, Expr rhs) {
       super(pos, lhs, rhs);
     }
 
     @Override
     public String toString() {
-      return String.format("UnionExpr(%s, %s, %s)", posString(), lhs.toString(), rhs.toString());
+      return String.format("UnionExpr(%s, %s, %s)", locationString(), lhs.toString(), rhs.toString());
     }
   }
 
   public static class DifferenceExpr extends BinaryExpr {
-    public DifferenceExpr(Position pos, Expr lhs, Expr rhs) {
+    public DifferenceExpr(Location pos, Expr lhs, Expr rhs) {
       super(pos, lhs, rhs);
     }
 
     @Override
     public String toString() {
-      return String.format("DifferenceExpr(%s, %s, %s)", posString(), lhs.toString(), rhs.toString());
+      return String.format("DifferenceExpr(%s, %s, %s)", locationString(), lhs.toString(), rhs.toString());
     }
   }
 
   public static class IntersectionExpr extends BinaryExpr {
-    public IntersectionExpr(Position pos, Expr lhs, Expr rhs) {
+    public IntersectionExpr(Location pos, Expr lhs, Expr rhs) {
       super(pos, lhs, rhs);
     }
 
     @Override
     public String toString() {
-      return String.format("IntersectionExpr(%s, %s, %s)", posString(), lhs.toString(), rhs.toString());
+      return String.format("IntersectionExpr(%s, %s, %s)", locationString(), lhs.toString(), rhs.toString());
     }
   }
 
   public static class StepExpr extends BinaryExpr {
-    public StepExpr(Position pos, Expr lhs, Expr rhs) {
+    public StepExpr(Location pos, Expr lhs, Expr rhs) {
       super(pos, lhs, rhs);
     }
 
     @Override
     public String toString() {
-      return String.format("StepExpr(%s, %s, %s)", posString(), lhs.toString(), rhs.toString());
+      return String.format("StepExpr(%s, %s, %s)", locationString(), lhs.toString(), rhs.toString());
     }
   }
 
   public abstract static class UnaryExpr extends Expr {
     public final Expr e;
 
-    public UnaryExpr(Position pos, Expr e) {
+    public UnaryExpr(Location pos, Expr e) {
       super(pos);
       this.e = e;
     }
   }
 
   public static class TransitiveExpr extends UnaryExpr {
-    public TransitiveExpr(Position pos, Expr e) {
+    public TransitiveExpr(Location pos, Expr e) {
       super(pos, e);
     }
 
     @Override
     public String toString() {
-      return String.format("TransitiveExpr(%s, %s)", posString(), e.toString());
+      return String.format("TransitiveExpr(%s, %s)", locationString(), e.toString());
     }
   }
 
   public static class SubTypeExpr extends UnaryExpr {
     public final ID subType;
 
-    public SubTypeExpr(Position pos, Expr e, ID subType) {
+    public SubTypeExpr(Location pos, Expr e, ID subType) {
       super(pos, e);
       this.subType = subType;
     }
 
     @Override
     public String toString() {
-      return String.format("SubTypeExpr(%s, %s, %s)", posString(), e.toString(), subType.toString());
+      return String.format("SubTypeExpr(%s, %s, %s)", locationString(), e.toString(), subType.toString());
     }
   }
 
   public static class IDExpr extends Expr {
     public final ID id;
 
-    public IDExpr(Position pos, ID id) {
+    public IDExpr(Location pos, ID id) {
       super(pos);
       this.id = id;
     }
 
     @Override
     public String toString() {
-      return String.format("IDExpr(%s, %s)", posString(), id.toString());
+      return String.format("IDExpr(%s, %s)", locationString(), id.toString());
     }
   }
 
   public static class CallExpr extends Expr {
     public final ID id;
 
-    public CallExpr(Position pos, ID id) {
+    public CallExpr(Location pos, ID id) {
       super(pos);
       this.id = id;
     }
 
     @Override
     public String toString() {
-      return String.format("CallExpr(%s, %s)", posString(), id.toString());
+      return String.format("CallExpr(%s, %s)", locationString(), id.toString());
     }
   }
 
-  public static class Association extends Position {
+  public static class Association extends Location {
     public final ID leftAsset;
     public final ID leftField;
     public final Multiplicity leftMult;
@@ -651,7 +651,7 @@ public class AST {
     public final ID rightAsset;
     public final List<Meta> meta;
 
-    public Association(Position pos, ID leftAsset, ID leftField, Multiplicity leftMult, ID linkName,
+    public Association(Location pos, ID leftAsset, ID leftField, Multiplicity leftMult, ID linkName,
         Multiplicity rightMult, ID rightField, ID rightAsset, List<Meta> meta) {
       super(pos);
       this.leftAsset = leftAsset;
@@ -667,7 +667,7 @@ public class AST {
     public String toString(int spaces) {
       var indent = " ".repeat(spaces);
       var sb = new StringBuilder();
-      sb.append(String.format("%sAssociation(%s, %s, %s, %s, %s, %s, %s, %s,%n", indent, posString(),
+      sb.append(String.format("%sAssociation(%s, %s, %s, %s, %s, %s, %s, %s,%n", indent, locationString(),
           leftAsset.toString(), leftField.toString(), leftMult.name(), linkName.toString(), rightMult.name(),
           rightField.toString(), rightAsset.toString()));
       sb.append(String.format("%s%n", Meta.listToString(meta, spaces + 2)));
