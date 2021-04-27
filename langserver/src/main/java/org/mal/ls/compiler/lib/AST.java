@@ -69,7 +69,7 @@ public class AST {
     this.defines.add(define);
   }
 
-  public static class ID extends Location {
+  public static class ID extends SyntaxNode {
     public final String id;
 
     public ID(Location pos, String id) {
@@ -83,7 +83,7 @@ public class AST {
     }
   }
 
-  public static class Define extends Location {
+  public static class Define extends SyntaxNode {
     public final ID key;
     public final String value;
 
@@ -114,7 +114,7 @@ public class AST {
     }
   }
 
-  public static class Meta extends Location {
+  public static class Meta extends SyntaxNode {
     public final ID type;
     public final String string;
 
@@ -145,7 +145,7 @@ public class AST {
     }
   }
 
-  public static class Category extends Location {
+  public static class Category extends SyntaxNode {
     public final ID name;
     public final List<Meta> meta;
     public final List<Asset> assets;
@@ -183,7 +183,7 @@ public class AST {
     }
   }
 
-  public static class Asset extends Location {
+  public static class Asset extends SyntaxNode {
     public final boolean isAbstract;
     public final ID name;
     public final Optional<ID> parent;
@@ -235,7 +235,7 @@ public class AST {
     ALL, ANY, DEFENSE, EXIST, NOTEXIST
   }
 
-  public static class AttackStep extends Location {
+  public static class AttackStep extends SyntaxNode {
     public final AttackStepType type;
     public final ID name;
     public final List<ID> tags;
@@ -326,7 +326,7 @@ public class AST {
     }
   }
 
-  public abstract static class TTCExpr extends Location {
+  public abstract static class TTCExpr extends SyntaxNode {
     public TTCExpr(Location pos) {
       super(pos);
     }
@@ -434,7 +434,7 @@ public class AST {
     }
   }
 
-  public static class Requires extends Location {
+  public static class Requires extends SyntaxNode {
     public final List<Expr> requires;
 
     public Requires(Location pos, List<Expr> requires) {
@@ -452,7 +452,7 @@ public class AST {
     }
   }
 
-  public static class Reaches extends Location {
+  public static class Reaches extends SyntaxNode {
     public final boolean inherits;
     public final List<Expr> reaches;
 
@@ -472,7 +472,7 @@ public class AST {
     }
   }
 
-  public static class Variable extends Location {
+  public static class Variable extends SyntaxNode {
     public final ID name;
     public final Expr expr;
 
@@ -503,7 +503,7 @@ public class AST {
     }
   }
 
-  public abstract static class Expr extends Location {
+  public abstract static class Expr extends SyntaxNode {
     public Expr(Location pos) {
       super(pos);
     }
@@ -641,7 +641,7 @@ public class AST {
     }
   }
 
-  public static class Association extends Location {
+  public static class Association extends SyntaxNode {
     public final ID leftAsset;
     public final ID leftField;
     public final Multiplicity leftMult;
