@@ -24,10 +24,10 @@ public class Token extends Location {
   public final int intValue;
   public final List<Token> preComments;
   public final List<Token> postComments;
-  public final List<SyntaxError> errors;
+  public final List<TokenError> errors;
 
-  public Token(TokenType type, String filename, Position start, Position end) {
-    super(filename, start, end);
+  public Token(TokenType type, Location location) {
+    super(location);
     this.type = type;
     this.stringValue = "";
     this.doubleValue = 0.0;
@@ -37,8 +37,8 @@ public class Token extends Location {
     this.errors = List.of();
   }
 
-  public Token(TokenType type, String filename, Position start, Position end, List<SyntaxError> errors) {
-    super(filename, start, end);
+  public Token(TokenType type, Location location, List<TokenError> errors) {
+    super(location);
     this.type = type;
     this.stringValue = "";
     this.doubleValue = 0.0;
@@ -48,8 +48,8 @@ public class Token extends Location {
     this.errors = errors;
   }
 
-  public Token(TokenType type, String filename, Position start, Position end, String stringValue) {
-    super(filename, start, end);
+  public Token(TokenType type, Location location, String stringValue) {
+    super(location);
     this.type = type;
     this.stringValue = stringValue;
     this.doubleValue = 0.0;
@@ -59,9 +59,8 @@ public class Token extends Location {
     this.errors = List.of();
   }
 
-  public Token(TokenType type, String filename, Position start, Position end, String stringValue,
-      List<SyntaxError> errors) {
-    super(filename, start, end);
+  public Token(TokenType type, Location location, String stringValue, List<TokenError> errors) {
+    super(location);
     System.err.println("Token constructor: " + errors.size());
     this.type = type;
     this.stringValue = stringValue;
@@ -83,8 +82,8 @@ public class Token extends Location {
     this.errors = tok.errors;
   }
 
-  public Token(TokenType type, String filename, Position start, Position end, double doubleValue) {
-    super(filename, start, end);
+  public Token(TokenType type, Location location, double doubleValue) {
+    super(location);
     this.type = type;
     this.stringValue = "";
     this.doubleValue = doubleValue;
@@ -94,8 +93,8 @@ public class Token extends Location {
     this.errors = List.of();
   }
 
-  public Token(TokenType type, String filename, Position start, Position end, int intValue) {
-    super(filename, start, end);
+  public Token(TokenType type, Location location, int intValue) {
+    super(location);
     this.type = type;
     this.stringValue = "";
     this.doubleValue = 0.0;

@@ -18,7 +18,7 @@ public class Location {
   }
 
   public String locationString() {
-    return String.format("<%s:%s:%s>", filename, start, end);
+    return String.format("<%s:%s,%s>", filename, start, end);
   }
 
   @Override

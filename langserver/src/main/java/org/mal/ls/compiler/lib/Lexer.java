@@ -25,6 +25,8 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 
+import org.mal.ls.compiler.lib.TokenError.TokenErrorType;
+
 public class Lexer {
   private MalLogger LOGGER;
   private String filename;
@@ -35,7 +37,7 @@ public class Lexer {
   private int startLine;
   private int startCol;
   private List<Byte> lexeme;
-  private List<SyntaxError> errors;
+  private List<TokenError> errors;
   private List<Token> comments = new ArrayList<>();
   private boolean eof;
 
@@ -126,6 +128,10 @@ public class Lexer {
       byteArray[i] = lexeme.get(i).byteValue();
     }
     return new String(byteArray, StandardCharsets.UTF_8);
+  }
+
+  private Location getLocation() {
+    return new Location(filename, new Position(startLine, startCol), new Position(line, col));
   }
 
   public Token next() throws CompilerException {
@@ -260,7 +266,7 @@ public class Lexer {
           consume();
           if (eof) {
             // Unterminated string starting at %s, new Position(startLine, startCol)
-            errors.add(new SyntaxError(SyntaxErrorType.UNTERMINATEDSTRING));
+            errors.add(new TokenError(TokenErrorType.UNTERMINATEDSTRING));
             return createToken(TokenType.STRING);
           }
           if (input[index] < 32 || input[index] > 126) {
@@ -273,14 +279,14 @@ public class Lexer {
             // lexeme = lexeme.subList(0, lexeme.size() - 2);
             if (!escapeSequences.containsKey(escapeSequence)) {
               // Invalid escape sequence '%s'", escapeSequence; }
-              errors.add(new SyntaxError(SyntaxErrorType.INVALIDESCAPESEQUENCE));
+              errors.add(new TokenError(TokenErrorType.INVALIDESCAPESEQUENCE));
             }
             invalidEscape = true;
           }
           // lexeme.add(escapeSequences.get(escapeSequence));
         } else if (eof) {
           // Unterminated string starting at %s, new Position(startLine, startCol)
-          errors.add(new SyntaxError(SyntaxErrorType.UNTERMINATEDSTRING));
+          errors.add(new TokenError(TokenErrorType.UNTERMINATEDSTRING));
           return createToken(TokenType.STRING);
         } else {
           consume();
@@ -288,7 +294,7 @@ public class Lexer {
       }
       consume();
       if (!closed) {
-        errors.add(new SyntaxError(SyntaxErrorType.UNTERMINATEDSTRING));
+        errors.add(new TokenError(TokenErrorType.UNTERMINATEDSTRING));
       }
       return createToken(TokenType.STRING);
     default:
@@ -379,26 +385,23 @@ public class Lexer {
     if (type == TokenType.MULTICOMMENT) {
       lexemeString = lexemeString.substring(0, lexemeString.length() - 2);
     }
-    comments.add(new Token(type, filename, new Position(startLine, startCol), new Position(line, col), lexemeString));
+    comments.add(new Token(type, getLocation(), lexemeString));
   }
 
   private Token createRawToken(TokenType type) {
     switch (type) {
     case INT:
-      return new Token(type, filename, new Position(startLine, startCol), new Position(line, col),
-          Integer.parseInt(getLexemeString()));
+      return new Token(type, getLocation(), Integer.parseInt(getLexemeString()));
     case FLOAT:
-      return new Token(type, filename, new Position(startLine, startCol), new Position(line, col),
-          Double.parseDouble(getLexemeString()));
+      return new Token(type, getLocation(), Double.parseDouble(getLexemeString()));
     case ID:
     case UNRECOGNIZEDTOKEN:
-      return new Token(type, filename, new Position(startLine, startCol), new Position(line, col), getLexemeString());
+      return new Token(type, getLocation(), getLexemeString());
     case STRING:
       var lexemeString = getLexemeString();
-      return new Token(type, filename, new Position(startLine, startCol), new Position(line, col),
-          lexemeString.substring(1, lexemeString.length() - 1), errors);
+      return new Token(type, getLocation(), lexemeString.substring(1, lexemeString.length() - 1), errors);
     default:
-      return new Token(type, filename, new Position(startLine, startCol), new Position(line, col));
+      return new Token(type, getLocation());
     }
   }
 
