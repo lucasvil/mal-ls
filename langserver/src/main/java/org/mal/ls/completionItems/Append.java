@@ -1,19 +1,19 @@
 /** 
- * This class represents the completion item asset
+ * This class represents the completion item append
  */
 package org.mal.ls.completionItems;
 
 import org.eclipse.lsp4j.CompletionItem;
 import org.eclipse.lsp4j.CompletionItemKind;
 
-public class Asset {
-    private final String text = "asset Name {\n\t\n}";
-    private final String label = "asset";
-    private final String info = "When the MAL compiler generates the Java code from the MAL specifications, an asset is translated into a java class.";
-    private final CompletionItemKind kind = CompletionItemKind.Snippet;
+public class Append {
+    private final String text = "+> ";
+    private final String label = "append";
+    private final String info = "Child assets only. When parent and child assets have overlapping elements, e.g. | access, the expressions defined for the child access are appended to those of the parent access. The child expressions will otherwise override those of the parent.";
+    private final CompletionItemKind kind = CompletionItemKind.Operator;
     private CompletionItem ci;
 
-    public Asset() {
+    public Append() {
         this.ci = new CompletionItem();
         this.ci.setInsertText(getText());
         this.ci.setLabel(getLabel());

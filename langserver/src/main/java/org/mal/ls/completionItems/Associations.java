@@ -1,19 +1,19 @@
 /** 
- * This class represents the completion item asset
+ * This class represents the completion item associations
  */
 package org.mal.ls.completionItems;
 
 import org.eclipse.lsp4j.CompletionItem;
 import org.eclipse.lsp4j.CompletionItemKind;
 
-public class Asset {
-    private final String text = "asset Name {\n\t\n}";
-    private final String label = "asset";
-    private final String info = "When the MAL compiler generates the Java code from the MAL specifications, an asset is translated into a java class.";
+public class Associations {
+    private final String text = "associations  {\n\tAsset1 [foo] * <-- connects --> * [bar] Asset2\n}";
+    private final String label = "associations";
+    private final String info = "Any number of Asset1 instantiations can be connected to any number of Asset2 instantiations. Inline references from Asset1 to Asset2 use the name bar. Conversely, Asset2 refers to Asset1 with the name foo.";
     private final CompletionItemKind kind = CompletionItemKind.Snippet;
     private CompletionItem ci;
 
-    public Asset() {
+    public Associations() {
         this.ci = new CompletionItem();
         this.ci.setInsertText(getText());
         this.ci.setLabel(getLabel());

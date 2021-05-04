@@ -1,19 +1,19 @@
 /** 
- * This class represents the completion item asset
+ * This class represents the completion item defence
  */
 package org.mal.ls.completionItems;
 
 import org.eclipse.lsp4j.CompletionItem;
 import org.eclipse.lsp4j.CompletionItemKind;
 
-public class Asset {
-    private final String text = "asset Name {\n\t\n}";
-    private final String label = "asset";
-    private final String info = "When the MAL compiler generates the Java code from the MAL specifications, an asset is translated into a java class.";
-    private final CompletionItemKind kind = CompletionItemKind.Snippet;
+public class Defense {
+    private final String text = "# ";
+    private final String label = "defence";
+    private final String info = "As opposed to attack steps defenses are boolean. A defense step represents the countermeasure of an attack step (e.g., passwordBruteForce attack step can be defended by twoFactorAuthentications defense step). While declaring an asset, it is possible to either enable or disable a defense step by setting the defense step to either TRUE or FALSE.";
+    private final CompletionItemKind kind = CompletionItemKind.Operator;
     private CompletionItem ci;
 
-    public Asset() {
+    public Defense() {
         this.ci = new CompletionItem();
         this.ci.setInsertText(getText());
         this.ci.setLabel(getLabel());

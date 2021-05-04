@@ -45,40 +45,27 @@ import org.mal.ls.diagnostic.DiagnosticService;
 public class MalTextDocumentService implements TextDocumentService {
   private MalLanguageServer server;
   private DocumentContext context;
+  private Map<String, CompletionItem> ciHashMap;
 
   public MalTextDocumentService(MalLanguageServer server) {
     this.server = server;
     this.context = new DocumentContext();
+    this.ciHashMap = new CompletionItemsHandler().getciHashMap();
   }
-
-  private CompletionItemsHandler texts = new CompletionItemsHandler();
 
   /**
    * Creates and returns a of completion items 
    */
   @Override
   public CompletableFuture<Either<List<CompletionItem>, CompletionList>> completion(CompletionParams completionParams) {
-    HashMap<String, String[]> ciHashMap = texts.getciHashMap();
     List<CompletionItem> completionItems = new ArrayList<>();
 
     return CompletableFuture.supplyAsync(() -> {
 
-      for (Map.Entry<String, String[]> ci : ciHashMap.entrySet()) {
-        String key = ci.getKey();
-        String value[] = ciHashMap.get(key);
-        completionItems.add(addCompetionItem(value[0], value[1], value[2]));
-      }
+      for (Map.Entry<String, CompletionItem> ci : this.ciHashMap.entrySet())
+        completionItems.add(ci.getValue());
       return Either.forLeft(completionItems);
     });
-  }
-
-  private CompletionItem addCompetionItem(String text, String label, String info) {
-    CompletionItem ci = new CompletionItem();
-    ci.setInsertText(text);
-    ci.setLabel(label);
-    ci.setKind(CompletionItemKind.Snippet);
-    ci.setDetail(info);
-    return ci;
   }
 
   @Override
