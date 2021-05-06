@@ -7,7 +7,7 @@ import org.eclipse.lsp4j.CompletionItem;
 import org.eclipse.lsp4j.CompletionItemKind;
 
 public class UserInfo {
-    private final String text = "user info: \"\"";
+    private final String text = "user info: ";
     private final String label = "user info";
     private final String info = "Tells other MAL writers why the attack step is used and other related information.";
     private final CompletionItemKind kind = CompletionItemKind.Snippet;

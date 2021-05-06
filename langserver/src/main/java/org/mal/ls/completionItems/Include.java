@@ -7,7 +7,7 @@ import org.eclipse.lsp4j.CompletionItem;
 import org.eclipse.lsp4j.CompletionItemKind;
 
 public class Include {
-    private final String text = "include \"\"";
+    private final String text = "include ";
     private final String label = "include";
     private final String info = "Includes the source code from inclded file into the current specification.";
     private final CompletionItemKind kind = CompletionItemKind.Snippet;

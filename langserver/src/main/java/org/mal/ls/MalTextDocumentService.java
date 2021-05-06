@@ -6,6 +6,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
+import java.io.File;
+
 import org.eclipse.lsp4j.CodeAction;
 import org.eclipse.lsp4j.CodeActionParams;
 import org.eclipse.lsp4j.CodeLens;
@@ -38,6 +40,7 @@ import org.eclipse.lsp4j.TextEdit;
 import org.eclipse.lsp4j.WorkspaceEdit;
 import org.eclipse.lsp4j.jsonrpc.messages.Either;
 import org.eclipse.lsp4j.services.TextDocumentService;
+import org.mal.ls.compiler.lib.Lexer;
 import org.mal.ls.context.DocumentContext;
 import org.mal.ls.context.DocumentContextKeys;
 import org.mal.ls.diagnostic.DiagnosticService;
@@ -45,12 +48,12 @@ import org.mal.ls.diagnostic.DiagnosticService;
 public class MalTextDocumentService implements TextDocumentService {
   private MalLanguageServer server;
   private DocumentContext context;
-  private Map<String, CompletionItem> ciHashMap;
+  private CompletionItemsHandler ciHandler;
 
   public MalTextDocumentService(MalLanguageServer server) {
     this.server = server;
     this.context = new DocumentContext();
-    this.ciHashMap = new CompletionItemsHandler().getciHashMap();
+    this.ciHandler = new CompletionItemsHandler();
   }
 
   /**
@@ -59,10 +62,11 @@ public class MalTextDocumentService implements TextDocumentService {
   @Override
   public CompletableFuture<Either<List<CompletionItem>, CompletionList>> completion(CompletionParams completionParams) {
     List<CompletionItem> completionItems = new ArrayList<>();
+    ciHandler.setCursorPos(completionParams.getPosition());
+    Map<String, CompletionItem> ciHashMap = ciHandler.getciHashMap();
 
     return CompletableFuture.supplyAsync(() -> {
-
-      for (Map.Entry<String, CompletionItem> ci : this.ciHashMap.entrySet())
+      for (Map.Entry<String, CompletionItem> ci : ciHashMap.entrySet())
         completionItems.add(ci.getValue());
       return Either.forLeft(completionItems);
     });

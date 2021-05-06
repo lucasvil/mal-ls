@@ -7,7 +7,7 @@ import org.eclipse.lsp4j.CompletionItem;
 import org.eclipse.lsp4j.CompletionItemKind;
 
 public class Abstract {
-    private final String text = "abstract";
+    private final String text = "abstract ";
     private final String label = "abstract";
     private final String info = "When the MAL compiler generates the Java code from the MAL specifications, an abstract asset is translated into a abstract java class.";
     private final CompletionItemKind kind = CompletionItemKind.Keyword;

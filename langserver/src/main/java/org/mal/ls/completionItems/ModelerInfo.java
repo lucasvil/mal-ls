@@ -7,7 +7,7 @@ import org.eclipse.lsp4j.CompletionItem;
 import org.eclipse.lsp4j.CompletionItemKind;
 
 public class ModelerInfo {
-    private final String text = "modeler info: \"\"";
+    private final String text = "modeler info: ";
     private final String label = "modeler info";
     private final String info = "Provides information to modellers or parser developers. It can be used to communicate assumptions or parsing requirements, which might otherwise be ambiguous";
     private final CompletionItemKind kind = CompletionItemKind.Snippet;

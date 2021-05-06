@@ -6,9 +6,11 @@ package org.mal.ls;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
-
+import java.util.ArrayList;
+import java.util.List;
 import org.eclipse.lsp4j.CompletionItem;
-
+import org.eclipse.lsp4j.Position;
+import org.eclipse.lsp4j.Range;
 import org.mal.ls.completionItems.Abstract;
 import org.mal.ls.completionItems.AND;
 import org.mal.ls.completionItems.Append;
@@ -16,6 +18,7 @@ import org.mal.ls.completionItems.Asset;
 import org.mal.ls.completionItems.Associations;
 import org.mal.ls.completionItems.Category;
 import org.mal.ls.completionItems.Defense;
+import org.mal.ls.completionItems.Define;
 import org.mal.ls.completionItems.DeveloperInfo;
 import org.mal.ls.completionItems.Existence;
 import org.mal.ls.completionItems.Extends;
@@ -33,10 +36,21 @@ import org.mal.ls.completionItems.UserInfo;
 public class CompletionItemsHandler {
     
     private Map<String, CompletionItem> ciHashMap;
+    private Position cursorPos;
+
+    private Asset asset;
+    private Associations association;
+    private Category category;
+    private Define define;
 
     public CompletionItemsHandler() {
+        this.cursorPos = new Position(0,0);
         this.ciHashMap = new HashMap<>();
+        initItems();
+        initUpdateItems();
+    }
 
+    private void initItems() {
         this.ciHashMap.put("abstract", new Abstract().getCi());
         this.ciHashMap.put("and", new AND().getCi());
         this.ciHashMap.put("append", new Append().getCi());
@@ -57,6 +71,40 @@ public class CompletionItemsHandler {
         this.ciHashMap.put("require", new Require().getCi());
         this.ciHashMap.put("union", new Union().getCi());
         this.ciHashMap.put("usrInfo", new UserInfo().getCi());
+    }
+    
+    private void initUpdateItems() {
+        this.asset = new Asset(this);
+        this.association = new Associations(this);
+        this.category = new Category(this);
+        this.define = new Define(this);
+
+        this.ciHashMap.put("asset-snippet", this.asset.getCiSnippet());
+        this.ciHashMap.put("association-snippet", this.association.getCiSnippet());
+        this.ciHashMap.put("category-snippet", this.category.getCiSnippet());
+        this.ciHashMap.put("define-snippet", this.define.getCi());
+    }
+
+    /**
+     * Sets the postition of the current postion of the cursor 
+     */
+    public Position getCursorPos() {
+        return this.cursorPos;
+    }
+
+    /**
+     * Sets the postition of the current postion of the cursor 
+     */
+    public void setCursorPos(Position cursorPos) {
+        this.cursorPos = cursorPos;
+        updateCi();
+    }
+
+    private void updateCi() {
+        this.ciHashMap.replace("asset-snippet", this.asset.getCiSnippet());
+        this.ciHashMap.replace("association-snippet", this.association.getCiSnippet());
+        this.ciHashMap.replace("category-snippet", this.category.getCiSnippet());
+        this.ciHashMap.replace("define-snippet", this.define.getCi());
     }
 
     /**
