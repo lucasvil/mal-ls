@@ -76,7 +76,11 @@ public class AST {
       super(pos);
       this.id = id;
     }
-
+    
+    public String getId() {
+      return this.id;
+    }
+    
     @Override
     public String toString() {
       return String.format("ID(%s, \"%s\")", locationString(), id);
@@ -124,6 +128,10 @@ public class AST {
       this.string = string;
     }
 
+    public String getString() {
+      return this.string;
+    }
+
     @Override
     public String toString() {
       return String.format("Meta(%s, %s, \"%s\")", locationString(), type.toString(), string);
@@ -155,6 +163,18 @@ public class AST {
       this.name = name;
       this.meta = meta;
       this.assets = assets;
+    }
+    
+    public ID getName() {
+      return this.name;
+    }
+
+    public List<Meta> getMeta() {
+      return this.meta;
+    }
+
+    public List<Asset> getAssets() {
+      return this.assets;
     }
 
     public String toString(int spaces) {
@@ -200,6 +220,18 @@ public class AST {
       this.meta = meta;
       this.attackSteps = attackSteps;
       this.variables = variables;
+    }
+
+    public List<Meta> getMeta() {
+      return this.meta;
+    }
+
+    public ID getName() {
+      return this.name;
+    }
+
+    public List<AttackStep> getAttacksteps() {
+      return this.attackSteps;
     }
 
     public String toString(int spaces) {
@@ -256,6 +288,18 @@ public class AST {
       this.meta = meta;
       this.requires = requires;
       this.reaches = reaches;
+    }
+
+    public List<Meta> getMeta() {
+      return this.meta;
+    }
+
+    public ID getName() {
+      return this.name;
+    }
+
+    public Optional<Reaches> getReaches() {
+      return this.reaches;
     }
 
     public String toString(int spaces) {
@@ -460,6 +504,10 @@ public class AST {
       super(pos);
       this.inherits = inherits;
       this.reaches = reaches;
+    }
+
+    public List<Expr> getReaches() {
+      return this.reaches;
     }
 
     public String toString(int spaces) {

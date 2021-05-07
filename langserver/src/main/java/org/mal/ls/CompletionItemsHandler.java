@@ -8,15 +8,18 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.ArrayList;
 import java.util.List;
+
 import org.eclipse.lsp4j.CompletionItem;
+import org.eclipse.lsp4j.CompletionItemKind;
 import org.eclipse.lsp4j.Position;
 import org.eclipse.lsp4j.Range;
+
 import org.mal.ls.completionItems.Abstract;
 import org.mal.ls.completionItems.AND;
 import org.mal.ls.completionItems.Append;
-import org.mal.ls.completionItems.Asset;
+import org.mal.ls.completionItems.AssetItem;
 import org.mal.ls.completionItems.Associations;
-import org.mal.ls.completionItems.Category;
+import org.mal.ls.completionItems.CategoryItem;
 import org.mal.ls.completionItems.Defense;
 import org.mal.ls.completionItems.Define;
 import org.mal.ls.completionItems.DeveloperInfo;
@@ -33,14 +36,21 @@ import org.mal.ls.completionItems.Require;
 import org.mal.ls.completionItems.Union;
 import org.mal.ls.completionItems.UserInfo;
 
+import org.mal.ls.compiler.lib.AST;
+import org.mal.ls.compiler.lib.AST.Asset;
+import org.mal.ls.compiler.lib.AST.AttackStep;
+import org.mal.ls.compiler.lib.AST.Category;
+import org.mal.ls.compiler.lib.AST.ID;
+import org.mal.ls.compiler.lib.AST.Meta;
+
 public class CompletionItemsHandler {
     
     private Map<String, CompletionItem> ciHashMap;
     private Position cursorPos;
 
-    private Asset asset;
+    private AssetItem asset;
     private Associations association;
-    private Category category;
+    private CategoryItem category;
     private Define define;
 
     public CompletionItemsHandler() {
@@ -54,9 +64,9 @@ public class CompletionItemsHandler {
         this.ciHashMap.put("abstract", new Abstract().getCi());
         this.ciHashMap.put("and", new AND().getCi());
         this.ciHashMap.put("append", new Append().getCi());
-        this.ciHashMap.put("asset", new Asset().getCi());
+        this.ciHashMap.put("asset", new AssetItem().getCi());
         this.ciHashMap.put("association", new Associations().getCi());
-        this.ciHashMap.put("category", new Category().getCi());
+        this.ciHashMap.put("category", new CategoryItem().getCi());
         this.ciHashMap.put("defense", new Defense().getCi());
         this.ciHashMap.put("devInfo", new DeveloperInfo().getCi());
         this.ciHashMap.put("existence", new Existence().getCi());
@@ -74,9 +84,9 @@ public class CompletionItemsHandler {
     }
     
     private void initUpdateItems() {
-        this.asset = new Asset(this);
+        this.asset = new AssetItem(this);
         this.association = new Associations(this);
-        this.category = new Category(this);
+        this.category = new CategoryItem(this);
         this.define = new Define(this);
 
         this.ciHashMap.put("asset-snippet", this.asset.getCiSnippet());
@@ -112,5 +122,46 @@ public class CompletionItemsHandler {
      */
     public Map<String, CompletionItem> getciHashMap() {
         return this.ciHashMap;
+    }
+
+    public void addCompletionItemASTNames(AST ast, List<CompletionItem> completionItems) {
+        List<Category> categories = ast.getCategories();
+        categories.forEach((category) -> {
+            completionItems.add(createCompletionItem(category.getName().getId()));
+            
+            List<Meta> metaCategory = category.getMeta();
+            metaCategory.forEach((m)-> {
+                completionItems.add(createCompletionItem(m.getString()));
+            });
+
+            List<Asset> assets = category.getAssets();
+            assets.forEach((asset) -> {
+                completionItems.add(createCompletionItem(asset.getName().getId()));
+                
+                List<Meta> metaAsset = asset.getMeta();
+                metaAsset.forEach((m)-> {
+                    completionItems.add(createCompletionItem(m.getString()));
+                });
+
+                List<AttackStep> attackSteps = asset.getAttacksteps();
+                attackSteps.forEach((attackStep) -> {
+
+                    List<Meta> metaAttackstep = attackStep.getMeta();
+                    metaAttackstep.forEach((m)-> {
+                        completionItems.add(createCompletionItem(m.getString()));
+                    });
+
+                    completionItems.add(createCompletionItem(attackStep.getName().getId()));
+                });
+            });
+        });
+    }
+
+    private CompletionItem createCompletionItem(String text) {
+        CompletionItem ci = new CompletionItem();
+        ci.setInsertText(text);
+        ci.setLabel(text);
+        ci.setKind(CompletionItemKind.Text);
+        return ci;
     }
 }

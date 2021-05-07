@@ -5,8 +5,12 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
+import java.util.Optional;
 
 import java.io.File;
+import java.io.IOException;
+
+import java.net.URI;
 
 import org.eclipse.lsp4j.CodeAction;
 import org.eclipse.lsp4j.CodeActionParams;
@@ -40,15 +44,25 @@ import org.eclipse.lsp4j.TextEdit;
 import org.eclipse.lsp4j.WorkspaceEdit;
 import org.eclipse.lsp4j.jsonrpc.messages.Either;
 import org.eclipse.lsp4j.services.TextDocumentService;
+
+import org.mal.ls.compiler.lib.AST;
+import org.mal.ls.compiler.lib.AST.Asset;
+import org.mal.ls.compiler.lib.AST.AttackStep;
+import org.mal.ls.compiler.lib.AST.Category;
+import org.mal.ls.compiler.lib.AST.ID;
+import org.mal.ls.compiler.lib.AST.Meta;
 import org.mal.ls.compiler.lib.Lexer;
+import org.mal.ls.compiler.lib.Parser;
 import org.mal.ls.context.DocumentContext;
 import org.mal.ls.context.DocumentContextKeys;
 import org.mal.ls.diagnostic.DiagnosticService;
 
 public class MalTextDocumentService implements TextDocumentService {
-  private MalLanguageServer server;
-  private DocumentContext context;
+  
+  private AST ast;
   private CompletionItemsHandler ciHandler;
+  private DocumentContext context;
+  private MalLanguageServer server;
 
   public MalTextDocumentService(MalLanguageServer server) {
     this.server = server;
@@ -64,6 +78,7 @@ public class MalTextDocumentService implements TextDocumentService {
     List<CompletionItem> completionItems = new ArrayList<>();
     ciHandler.setCursorPos(completionParams.getPosition());
     Map<String, CompletionItem> ciHashMap = ciHandler.getciHashMap();
+    ciHandler.addCompletionItemASTNames(this.ast, completionItems);
 
     return CompletableFuture.supplyAsync(() -> {
       for (Map.Entry<String, CompletionItem> ci : ciHashMap.entrySet())
@@ -145,11 +160,13 @@ public class MalTextDocumentService implements TextDocumentService {
   public void didOpen(DidOpenTextDocumentParams params) {
     context.put(DocumentContextKeys.URI_KEY, params.getTextDocument().getUri());
     server.getClient().publishDiagnostics(DiagnosticService.getDiagnosticsParams(context));
+    updateAST();
   }
 
   @Override
   public void didChange(DidChangeTextDocumentParams params) {
     server.getClient().publishDiagnostics(DiagnosticService.getDiagnosticsParams(context));
+    updateAST();
   }
 
   @Override
@@ -160,5 +177,16 @@ public class MalTextDocumentService implements TextDocumentService {
   @Override
   public void didSave(DidSaveTextDocumentParams didSaveTextDocumentParams) {
     server.getClient().publishDiagnostics(DiagnosticService.getDiagnosticsParams(context));
+    updateAST();
+  }
+
+  private void updateAST() {
+    try {
+      File f = new File(new URI(context.get(DocumentContextKeys.URI_KEY)));
+      this.ast = Parser.parse(f);
+    } catch (Exception e) {
+      /* TODO handle exceptions */
+      System.err.print(e);
+    }
   }
 }

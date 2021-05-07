@@ -13,27 +13,28 @@ import org.eclipse.lsp4j.Range;
 import org.eclipse.lsp4j.TextEdit;
 
 /** 
- * This class represents the completion item asset
+ * This class represents the completion item category
  */
-public class Asset {
+public class CategoryItem {
     private CompletionItem ci;
-    private final String text = "asset ";
-    private final String label = "asset";
-    private final String info = "When the MAL compiler generates the Java code from the MAL specifications, an asset is translated into a java class.";
+    private final String text = "category ";
+    private final String label = "category";
+    private final String info = "Similar to a package in Java. A category consists of one or more assets. The category does not bear semantics, it is only there to enable structure for the language developer.";
     private final CompletionItemKind kind = CompletionItemKind.Keyword;
     
     private CompletionItem ciSnippet;
-    private final String textSnippet = "asset Name";
-    private final String labelSnippet = "asset-snippet";
+    private final String textSnippet = "category name";
+    private final String afterText = " {\n\t\n}\n";
+    private final String labelSnippet = "category-snippet";
     private final CompletionItemKind kindSnippet = CompletionItemKind.Snippet;
     
     private CompletionItemsHandler ciHandler;
 
-    public Asset() {
+    public CategoryItem() {
         initCi(this.text, this.label, this.kind, null);
     }
 
-    public Asset(CompletionItemsHandler ciHandler) {
+    public CategoryItem(CompletionItemsHandler ciHandler) {
         this.ciHandler = ciHandler;
         updateCi();
     }
@@ -63,19 +64,8 @@ public class Asset {
         int noCharacters = start.getCharacter();
         Position end = new Position(noLines+1, noCharacters);
         Range range = new Range(start, end);
-        TextEdit te = new TextEdit(range, createAfterString(noCharacters));
+        TextEdit te = new TextEdit(range, this.afterText);
         return te;
-    }
-
-    private String createAfterString(int noCharacters) {
-        StringBuilder sb = new StringBuilder();
-        sb.append(" {\n\t\n");
-        for (int i = 0; i<noCharacters; i++)
-            sb.append(" ");
-        sb.append("}\n");
-        for (int i = 0; i<noCharacters; i++)
-            sb.append(" ");
-        return sb.toString();
     }
 
     /** 
