@@ -35,6 +35,7 @@ import org.eclipse.lsp4j.Hover;
 import org.eclipse.lsp4j.HoverParams;
 import org.eclipse.lsp4j.Location;
 import org.eclipse.lsp4j.LocationLink;
+import org.eclipse.lsp4j.Range;
 import org.eclipse.lsp4j.ReferenceParams;
 import org.eclipse.lsp4j.RenameParams;
 import org.eclipse.lsp4j.SignatureHelp;
@@ -61,6 +62,7 @@ public class MalTextDocumentService implements TextDocumentService {
   
   private AST ast;
   private CompletionItemsHandler ciHandler;
+  private DefinitionHandler defHandler;
   private DocumentContext context;
   private MalLanguageServer server;
 
@@ -68,10 +70,11 @@ public class MalTextDocumentService implements TextDocumentService {
     this.server = server;
     this.context = new DocumentContext();
     this.ciHandler = new CompletionItemsHandler();
+    this.defHandler = new DefinitionHandler();
   }
 
   /**
-   * Creates and returns a of completion items 
+   * Creates and returns a list of completion items 
    */
   @Override
   public CompletableFuture<Either<List<CompletionItem>, CompletionList>> completion(CompletionParams completionParams) {
@@ -105,7 +108,21 @@ public class MalTextDocumentService implements TextDocumentService {
   @Override
   public CompletableFuture<Either<List<? extends Location>, List<? extends LocationLink>>> definition(
       DefinitionParams params) {
-    return null;
+    
+    List<Location> locationList = new ArrayList<>();
+    //List<LocationLink> locationlinkList = new ArrayList<>();
+    return CompletableFuture.supplyAsync(() -> {
+      String variable = this.defHandler.getVariable(params.getPosition(), this.ast);
+      System.err.println(variable);
+      if (!variable.equals("")) {
+        Range range = this.defHandler.getDefinitionRange(this.ast);
+        Location location = new Location(params.getTextDocument().getUri(), range);
+        System.err.println(range);
+        locationList.add(location);
+      }
+      return Either.forLeft(locationList);
+    });
+    //return null;
   }
 
   @Override

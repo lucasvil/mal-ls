@@ -124,6 +124,9 @@ public class CompletionItemsHandler {
         return this.ciHashMap;
     }
 
+    /**
+     * Iterates through the ast and adds completion items for entity names
+     */
     public void addCompletionItemASTNames(AST ast, List<CompletionItem> completionItems) {
         List<Category> categories = ast.getCategories();
         categories.forEach((category) -> {
