@@ -222,8 +222,8 @@ public class AST {
       this.variables = variables;
     }
 
-    public List<Meta> getMeta() {
-      return this.meta;
+    public List<Variable> getVariables() {
+      return this.variables;
     }
 
     public ID getName() {
@@ -528,6 +528,10 @@ public class AST {
       super(pos);
       this.name = name;
       this.expr = expr;
+    }
+
+    public ID getName() {
+      return this.name;
     }
 
     @Override

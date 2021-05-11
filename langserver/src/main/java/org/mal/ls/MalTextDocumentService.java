@@ -105,24 +105,27 @@ public class MalTextDocumentService implements TextDocumentService {
     return null;
   }
 
+  /**
+   * Identifies token for location and returns location were token is initlized
+   */
   @Override
   public CompletableFuture<Either<List<? extends Location>, List<? extends LocationLink>>> definition(
       DefinitionParams params) {
-    
+    context.put(DocumentContextKeys.URI_KEY, params.getTextDocument().getUri());
+    updateAST();
     List<Location> locationList = new ArrayList<>();
-    //List<LocationLink> locationlinkList = new ArrayList<>();
     return CompletableFuture.supplyAsync(() -> {
       String variable = this.defHandler.getVariable(params.getPosition(), this.ast);
-      System.err.println(variable);
       if (!variable.equals("")) {
         Range range = this.defHandler.getDefinitionRange(this.ast);
-        Location location = new Location(params.getTextDocument().getUri(), range);
-        System.err.println(range);
+        String uri = this.defHandler.getDefinitionUri(context.get(DocumentContextKeys.URI_KEY));
+        Location location = new Location();
+        location.setUri(uri);
+        location.setRange(range);
         locationList.add(location);
       }
       return Either.forLeft(locationList);
     });
-    //return null;
   }
 
   @Override

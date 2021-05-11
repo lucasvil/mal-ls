@@ -41,7 +41,7 @@ import org.mal.ls.compiler.lib.AST.Asset;
 import org.mal.ls.compiler.lib.AST.AttackStep;
 import org.mal.ls.compiler.lib.AST.Category;
 import org.mal.ls.compiler.lib.AST.ID;
-import org.mal.ls.compiler.lib.AST.Meta;
+import org.mal.ls.compiler.lib.AST.Variable;
 
 public class CompletionItemsHandler {
     
@@ -132,27 +132,17 @@ public class CompletionItemsHandler {
         categories.forEach((category) -> {
             completionItems.add(createCompletionItem(category.getName().getId()));
             
-            List<Meta> metaCategory = category.getMeta();
-            metaCategory.forEach((m)-> {
-                completionItems.add(createCompletionItem(m.getString()));
-            });
-
             List<Asset> assets = category.getAssets();
             assets.forEach((asset) -> {
                 completionItems.add(createCompletionItem(asset.getName().getId()));
                 
-                List<Meta> metaAsset = asset.getMeta();
-                metaAsset.forEach((m)-> {
-                    completionItems.add(createCompletionItem(m.getString()));
+                List<Variable> letAsset = asset.getVariables();
+                letAsset.forEach((let)-> {
+                    completionItems.add(createCompletionItem(let.getName().getId()));
                 });
 
                 List<AttackStep> attackSteps = asset.getAttacksteps();
                 attackSteps.forEach((attackStep) -> {
-
-                    List<Meta> metaAttackstep = attackStep.getMeta();
-                    metaAttackstep.forEach((m)-> {
-                        completionItems.add(createCompletionItem(m.getString()));
-                    });
 
                     completionItems.add(createCompletionItem(attackStep.getName().getId()));
                 });
