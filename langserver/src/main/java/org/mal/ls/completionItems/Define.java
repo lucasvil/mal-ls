@@ -6,7 +6,7 @@ package org.mal.ls.completionItems;
 import java.util.ArrayList;
 import java.util.List;
 import java.lang.StringBuilder;
-import org.mal.ls.CompletionItemsHandler;
+import org.mal.ls.handler.CompletionItemsHandler;
 import org.eclipse.lsp4j.CompletionItem;
 import org.eclipse.lsp4j.CompletionItemKind;
 import org.eclipse.lsp4j.InsertTextFormat;

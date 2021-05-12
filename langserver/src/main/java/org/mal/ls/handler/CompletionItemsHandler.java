@@ -1,7 +1,7 @@
 /** 
  * This class handles the instences of completion items
  */
-package org.mal.ls;
+package org.mal.ls.handler;
 
 import java.util.Arrays;
 import java.util.HashMap;

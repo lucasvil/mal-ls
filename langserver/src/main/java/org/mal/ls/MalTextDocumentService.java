@@ -57,6 +57,8 @@ import org.mal.ls.compiler.lib.Parser;
 import org.mal.ls.context.DocumentContext;
 import org.mal.ls.context.DocumentContextKeys;
 import org.mal.ls.diagnostic.DiagnosticService;
+import org.mal.ls.handler.CompletionItemsHandler;
+import org.mal.ls.handler.DefinitionHandler;
 
 public class MalTextDocumentService implements TextDocumentService {
   

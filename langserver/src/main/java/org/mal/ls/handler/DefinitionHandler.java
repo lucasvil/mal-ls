@@ -1,12 +1,10 @@
-package org.mal.ls;
+package org.mal.ls.handler;
 
 import java.util.List;
-
 import java.net.URI;
-
 import org.eclipse.lsp4j.Position;
 import org.eclipse.lsp4j.Range;
-
+import org.mal.ls.module.ConversionModule;
 import org.mal.ls.compiler.lib.AST;
 import org.mal.ls.compiler.lib.AST.Asset;
 import org.mal.ls.compiler.lib.AST.Association;
@@ -21,6 +19,9 @@ public class DefinitionHandler {
   private String variable = "";
   private String definitionUri = "";
 
+  /*
+   * returns the full uri path to the definition file
+   */
   public String getDefinitionUri(String uri) {
     StringBuilder sb = new StringBuilder();
     String[] path = uri.split("/");
@@ -32,6 +33,9 @@ public class DefinitionHandler {
     return sb.toString();
   }
 
+  /*
+   * Finds the range to which corresponds to the earlier found variable
+   */
   public Range getDefinitionRange(AST ast) {
     Range range = new Range();
     
@@ -62,15 +66,19 @@ public class DefinitionHandler {
   }
 
   private void setRange(Location obj, Range range) {
-      range.setStart(new Position(obj.start.line-1, obj.start.col-1));
-      range.setEnd(new Position(obj.end.line-1, obj.end.col-1));
+      range.setStart(ConversionModule.compilerToClient(new Position(obj.start.line, obj.start.col)));
+      range.setEnd(ConversionModule.compilerToClient(new Position(obj.end.line, obj.end.col)));
       this.definitionUri = obj.filename;
   }
 
+  /*
+   * Finds and sets the token name to the corresponding postion
+   */
   public String getVariable(Position position, AST ast) {
-    this.variable = "";
-    int line = position.getLine()+1;
-    int character = position.getCharacter()+1;
+    resetVariable();
+    position = ConversionModule.clientToCompiler(position);
+    int line = position.getLine();
+    int character = position.getCharacter();
     List<Association> associations = ast.getAssociations();
     List<Category> categories = ast.getCategories();
     iterAssociation(associations, line, character);
@@ -78,9 +86,12 @@ public class DefinitionHandler {
     return this.variable;
   }
 
+  private void resetVariable() {
+    this.variable = "";
+  }
+
   private void iterAttacksteps(List<Category> categories, int line, int character) {
     categories.forEach((category) -> {
-      //String[] catList = trimString(association.toString(0));
       List<Asset> assets = category.getAssets();
       assets.forEach((asset) -> {
         List<AttackStep> attackSteps = asset.getAttacksteps();
@@ -192,7 +203,7 @@ public class DefinitionHandler {
 
   private void iterAssociation(List<Association> associations, int line, int character) {
     associations.forEach((association) -> {
-      String[] assoList = trimString(association.toString(0));
+      String[] assoList = trimAssoString(association.toString(0));
       int startLine, startChar, endLine, endChar;
       
       for (int i=0; i<assoList.length-1; i+=2) {
@@ -208,7 +219,7 @@ public class DefinitionHandler {
     });
   }
 
-  private String[] trimString(String str) {
+  private String[] trimAssoString(String str) {
     str = str.replace("ID(","");
     str = str.replace(")","");
     str = str.replace(">","");
