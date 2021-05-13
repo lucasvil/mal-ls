@@ -290,12 +290,12 @@ public class AST {
       this.reaches = reaches;
     }
 
-    public List<Meta> getMeta() {
-      return this.meta;
-    }
-
     public ID getName() {
       return this.name;
+    }
+
+    public Optional<Requires> getRequires() {
+      return this.requires;
     }
 
     public Optional<Reaches> getReaches() {
@@ -504,10 +504,6 @@ public class AST {
       super(pos);
       this.inherits = inherits;
       this.reaches = reaches;
-    }
-
-    public List<Expr> getReaches() {
-      return this.reaches;
     }
 
     public String toString(int spaces) {

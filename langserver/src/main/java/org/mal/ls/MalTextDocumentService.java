@@ -119,7 +119,7 @@ public class MalTextDocumentService implements TextDocumentService {
     return CompletableFuture.supplyAsync(() -> {
       String variable = this.defHandler.getVariable(params.getPosition(), this.ast);
       if (!variable.equals("")) {
-        Range range = this.defHandler.getDefinitionRange(this.ast);
+        Range range = this.defHandler.getDefinitionRange();
         String uri = this.defHandler.getDefinitionUri(context.get(DocumentContextKeys.URI_KEY));
         Location location = new Location();
         location.setUri(uri);

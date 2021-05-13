@@ -6,22 +6,25 @@ import org.eclipse.lsp4j.Position;
 import org.eclipse.lsp4j.Range;
 import org.mal.ls.module.ConversionModule;
 import org.mal.ls.compiler.lib.AST;
-import org.mal.ls.compiler.lib.AST.Asset;
-import org.mal.ls.compiler.lib.AST.Association;
-import org.mal.ls.compiler.lib.AST.AttackStep;
-import org.mal.ls.compiler.lib.AST.Category;
-import org.mal.ls.compiler.lib.AST.ID;
-import org.mal.ls.compiler.lib.AST.Variable;
-import org.mal.ls.compiler.lib.Location;
+import org.mal.ls.context.DefinitionContext;
+import org.mal.ls.context.DefinitionContext.DefinitionAssociation;
+import org.mal.ls.context.DefinitionContext.DefinitionAsset;
+import org.mal.ls.context.DefinitionContext.DefinitionAttackStep;
+import org.mal.ls.context.DefinitionContext.DefinitionCategory;
+import org.mal.ls.context.DefinitionContext.DefinitionVariable;
+import org.mal.ls.context.DefinitionContext.DefinitionReaches;
+import org.mal.ls.context.DefinitionContext.DefinitionRequires;
+import org.mal.ls.context.DefinitionContext.DefinitionItem;
 
 public class DefinitionHandler {
-
+  
   private String variable = "";
   private String definitionUri = "";
-
+  private DefinitionContext dc;
+  
   /*
-   * returns the full uri path to the definition file
-   */
+  * returns the full uri path to the definition file
+  */
   public String getDefinitionUri(String uri) {
     StringBuilder sb = new StringBuilder();
     String[] path = uri.split("/");
@@ -33,209 +36,111 @@ public class DefinitionHandler {
     return sb.toString();
   }
 
+  private void resetVariable() {
+    this.variable = "";
+  }
+  
+  private String setLowerCase(String str) {
+    char c[] = str.toCharArray();
+    c[0] = Character.toLowerCase(c[0]);
+    return new String(c);
+  }
+  
   /*
    * Finds the range to which corresponds to the earlier found variable
    */
-  public Range getDefinitionRange(AST ast) {
+  public Range getDefinitionRange() {
     Range range = new Range();
-    
-    List<Category> categories = ast.getCategories();
-    categories.forEach((category) -> {
-      if (setLowerCase(category.getName().getId()).equals(this.variable))
-        setRange(category, range);
-      
-      List<Asset> assets = category.getAssets();
-      assets.forEach((asset) -> {
-        List<Variable> variables = asset.getVariables();
-        variables.forEach((variable) -> {
-          if (setLowerCase(variable.getName().getId()).equals(this.variable))
-            setRange(variable, range);
-        });
-
-        if (setLowerCase(asset.getName().getId()).equals(this.variable))
-          setRange(asset, range);
-        
-        List<AttackStep> attackSteps = asset.getAttacksteps();
-        attackSteps.forEach((attackStep) -> {
-          if (setLowerCase(attackStep.getName().getId()).equals(this.variable))
-            setRange(attackStep, range);
-        });
-      });
-    });
+    iterCategories(this.dc.getCategories(), range);
+    iterAssets(this.dc.getAssets(), range);
+    iterVariables(this.dc.getVariables(), range);
+    iterAttackSteps(this.dc.getAttackSteps(), range);
     return range;
   }
 
-  private void setRange(Location obj, Range range) {
-      range.setStart(ConversionModule.compilerToClient(new Position(obj.start.line, obj.start.col)));
-      range.setEnd(ConversionModule.compilerToClient(new Position(obj.end.line, obj.end.col)));
-      this.definitionUri = obj.filename;
+  private void iterCategories(List<DefinitionCategory> categories, Range range) {
+    categories.forEach((category) -> {
+      if (setLowerCase(category.name).equals(this.variable))
+        setRange(category, range);
+    });
+  }
+
+  private void iterAssets(List<DefinitionAsset> assets, Range range) {
+    assets.forEach((asset) -> {
+      if (setLowerCase(asset.name).equals(this.variable))
+        setRange(asset, range);
+    });
+  }
+
+  private void iterVariables(List<DefinitionVariable> variables, Range range) {
+    variables.forEach((variable) -> {
+      if (setLowerCase(variable.name).equals(this.variable))
+        setRange(variable, range);
+    });
+  }
+
+  private void iterAttackSteps(List<DefinitionAttackStep> attackSteps, Range range) {
+    attackSteps.forEach((as) -> {
+      if (setLowerCase(as.name).equals(this.variable))
+        setRange(as, range);
+    });
+  }
+
+  private void setRange(DefinitionItem di, Range range) {
+      range.setStart(ConversionModule.compilerToClient(new Position(di.startLine, di.startChar)));
+      range.setEnd(ConversionModule.compilerToClient(new Position(di.endLine, di.endChar)));
+      this.definitionUri = di.filename;
   }
 
   /*
    * Finds and sets the token name to the corresponding postion
    */
   public String getVariable(Position position, AST ast) {
+    this.dc = new DefinitionContext(ast);
     resetVariable();
     position = ConversionModule.clientToCompiler(position);
     int line = position.getLine();
     int character = position.getCharacter();
-    List<Association> associations = ast.getAssociations();
-    List<Category> categories = ast.getCategories();
-    iterAssociation(associations, line, character);
-    iterAttacksteps(categories, line, character);
+
+    iterAssociation(dc.getAssociations(), line, character);
+    iterReaches(dc.getReaches(), line, character);
+    iterRequires(dc.getRequires(), line, character);
+
     return this.variable;
   }
 
-  private void resetVariable() {
-    this.variable = "";
-  }
-
-  private void iterAttacksteps(List<Category> categories, int line, int character) {
-    categories.forEach((category) -> {
-      List<Asset> assets = category.getAssets();
-      assets.forEach((asset) -> {
-        List<AttackStep> attackSteps = asset.getAttacksteps();
-        attackSteps.forEach((attackStep) -> {
-          String[] asList = trimAsString(attackStep.toString(0));
-          int startLine, startChar, endLine, endChar;
-          if (asList != null) {
-            
-            for (int i=0; i<asList.length-1; i+=2) {
-              String[] asStr = asList[i].split(":");
-              startLine = Integer.parseInt(asStr[1]);
-              startChar = Integer.parseInt(asStr[2]);
-              endLine = Integer.parseInt(asStr[3]);
-              endChar = Integer.parseInt(asStr[4]);
-              if(endLine>=line && line>=startLine && endChar>=character && character>=startChar){
-                this.variable = setLowerCase(asList[i+1]);
-              }
-            }
-          }
-        });
-      });
-    });
-  }
-
-  private String setLowerCase(String str) {
-    char c[] = str.toCharArray();
-    c[0] = Character.toLowerCase(c[0]);
-    return new String(c);
-  }
-
-  private String[] trimAsString(String str) {
-    String[] list = str.split("meta =");
-    String[] asList;
-    str = list[1];
-    str = str.replace(")","");
-    str = str.replace(">","");
-    str = str.replace("<","");
-    str = str.replace(" ","");
-    str = str.replace("\"","");
-    str = str.replace("{", "");
-    str = str.replace("}", "");
-    str = str.replace("OVERRIDES,", "");
-    str = str.replace("reaches=", "");
-    str = str.replace("requires=", "");
-    str = str.replace("\n", "");
-    list = str.split(",");
-    if (list[1].equals("NO_REQUIRES")) {
-      if (list.length <= 3) {
-        return null;
-      } else if(list.length <= 6) {
-        asList = new String[2];
-        asList[0] = list[4];
-        asList[1] = list[5];
-      } else {
-        asList = new String[4];
-        asList[0] = list[5];
-        asList[1] = list[6];
-        asList[2] = list[8];
-        asList[3] = list[9];
-      }
-    } else {
-      if (list.length <= 6) {
-        asList = new String[2];
-        asList[0] = list[3];
-        asList[1] = list[4];
-      } else if (list.length <= 9) {
-        asList = new String[4];
-        asList[0] = list[3];
-        asList[1] = list[4];
-        asList[2] = list[7];
-        asList[3] = list[8];
-      } else if (list.length <= 10) {
-        asList = new String[4];
-        asList[0] = list[4];
-        asList[1] = list[5];
-        asList[2] = list[7];
-        asList[3] = list[8];
-      } else if (list.length <= 14) {
-        asList = new String[6];
-        if (list[5].contains("Reaches(")) {
-          asList[0] = list[3];
-          asList[1] = list[4];
-          asList[2] = list[8];
-          asList[3] = list[9];
-          asList[4] = list[11];
-          asList[5] = list[12];
-        } else {
-          asList[0] = list[4];
-          asList[1] = list[5];
-          asList[2] = list[7];
-          asList[3] = list[8];
-          asList[4] = list[11];
-          asList[5] = list[12];
-        }
-      } else {
-        asList = new String[8];
-        asList[0] = list[4];
-        asList[1] = list[5];
-        asList[2] = list[7];
-        asList[3] = list[8];
-        asList[4] = list[12];
-        asList[5] = list[13];
-        asList[6] = list[15];
-        asList[7] = list[16];
-      }
-    }
-    return asList;
-  }
-
-  private void iterAssociation(List<Association> associations, int line, int character) {
+  private void iterAssociation(List<DefinitionAssociation> associations, int line, int character) {
     associations.forEach((association) -> {
-      String[] assoList = trimAssoString(association.toString(0));
-      int startLine, startChar, endLine, endChar;
-      
-      for (int i=0; i<assoList.length-1; i+=2) {
-        String[] assoStr = assoList[i].split(":");
-        startLine = Integer.parseInt(assoStr[1]);
-        startChar = Integer.parseInt(assoStr[2]);
-        endLine = Integer.parseInt(assoStr[3]);
-        endChar = Integer.parseInt(assoStr[4]);
-        if(endLine>=line && line>=startLine && endChar>=character && character>=startChar){
-          this.variable = setLowerCase(assoList[i+1]);
-        }
+      if(association.endLine >= line && 
+        line >= association.startLine && 
+        association.endChar >= character && 
+        character >= association.startChar){
+        this.variable = setLowerCase(association.name);
       }
     });
   }
 
-  private String[] trimAssoString(String str) {
-    str = str.replace("ID(","");
-    str = str.replace(")","");
-    str = str.replace(">","");
-    str = str.replace("<","");
-    str = str.replace(" ","");
-    str = str.replace("\"","");
-    String[] list = str.split(",");
-    String[] assoList = new String[8];
-    assoList[0] = list[1];
-    assoList[1] = list[2];
-    assoList[2] = list[3];
-    assoList[3] = list[4];
-    assoList[4] = list[9];
-    assoList[5] = list[10];
-    assoList[6] = list[11];
-    assoList[7] = list[12];
-    return assoList;
+  private void iterReaches(List<DefinitionReaches> reaches, int line, int character) {
+    reaches.forEach((r) -> {
+      int startLine, startChar, endLine, endChar;
+      if(r.endLine >= line && 
+        line >= r.startLine && 
+        r.endChar >= character && 
+        character >= r.startChar){
+        this.variable = setLowerCase(r.name);
+      }
+    });
+  }
+
+  private void iterRequires(List<DefinitionRequires> requires, int line, int character) {
+    requires.forEach((r) -> {
+      int startLine, startChar, endLine, endChar;
+      if(r.endLine >= line && 
+        line >= r.startLine && 
+        r.endChar >= character && 
+        character >= r.startChar){
+        this.variable = setLowerCase(r.name);
+      }
+    });
   }
 }
