@@ -1,7 +1,7 @@
 package org.mal.ls.compiler.lib;
 
 public class MissingToken extends Token {
-  public MissingToken(TokenType type, Location location) {
+  public MissingToken(TokenType type, MalLocation location) {
     super(type, location);
   }
 

@@ -23,6 +23,8 @@ import java.util.logging.Level;
 import java.util.logging.LogRecord;
 import java.util.logging.Logger;
 
+import org.eclipse.lsp4j.Position;
+
 public class MalLogger extends Logger {
   @SuppressWarnings("serial")
   private static class MalLevel extends Level {
@@ -53,19 +55,19 @@ public class MalLogger extends Logger {
 
       if (System.console() != null) {
         switch (level.getName()) {
-        case "ERROR":
-          colorInit = "\u001B[1;31m";
-          break;
-        case "WARNING":
-          colorInit = "\u001B[1;33m";
-          break;
-        case "INFO":
-          colorInit = "\u001B[1;34m";
-          break;
-        case "DEBUG":
-          colorInit = "\u001B[1;36m";
-          break;
-        default:
+          case "ERROR":
+            colorInit = "\u001B[1;31m";
+            break;
+          case "WARNING":
+            colorInit = "\u001B[1;33m";
+            break;
+          case "INFO":
+            colorInit = "\u001B[1;34m";
+            break;
+          case "DEBUG":
+            colorInit = "\u001B[1;36m";
+            break;
+          default:
         }
         colorClear = "\u001B[m";
       }
@@ -114,7 +116,11 @@ public class MalLogger extends Logger {
         return 1;
       }
       var other = (LogMessagePosition) o;
-      int cmp = this.position.compareTo(other.position);
+      int cmp = Integer.compare(this.position.getLine(), other.position.getLine());
+      if (cmp != 0) {
+        return cmp;
+      }
+      cmp = Integer.compare(this.position.getCharacter(), other.position.getCharacter());
       if (cmp != 0) {
         return cmp;
       }
@@ -127,7 +133,7 @@ public class MalLogger extends Logger {
 
     @Override
     public String toString() {
-      return String.format("%s %s", position.posString(), message);
+      return String.format("%s %s", position, message);
     }
   }
 

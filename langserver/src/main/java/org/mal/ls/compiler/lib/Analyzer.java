@@ -165,7 +165,7 @@ public class Analyzer {
     for (AST.Define define : ast.getDefines()) {
       AST.Define prevDef = defines.put(define.key.id, define);
       if (prevDef != null) {
-        error(define, String.format("Define '%s' previously defined at %s", define.key.id, prevDef.start.posString()));
+        error(define, String.format("Define '%s' previously defined at %s", define.key.id, prevDef.getStart()));
       }
     }
     AST.Define id = defines.get("id");
@@ -232,7 +232,7 @@ public class Analyzer {
         metas.put(meta.type.id, meta);
       } else {
         var prevDef = metas.get(meta.type.id);
-        error(meta, String.format("Metadata %s previously defined at %s", meta.type.id, prevDef.start.posString()));
+        error(meta, String.format("Metadata %s previously defined at %s", meta.type.id, prevDef.getStart()));
       }
     }
   }
@@ -243,7 +243,7 @@ public class Analyzer {
         if (assets.containsKey(asset.name.id)) {
           AST.Asset prevDef = assets.get(asset.name.id);
           error(asset.name,
-              String.format("Asset '%s' previously defined at %s", asset.name.id, prevDef.name.start.posString()));
+              String.format("Asset '%s' previously defined at %s", asset.name.id, prevDef.name.getStart()));
         } else {
           assets.put(asset.name.id, asset);
         }
@@ -459,13 +459,13 @@ public class Analyzer {
               error(attackStep.name,
                   String.format(
                       "Cannot override attack step '%s' previously defined at %s with different type '%s' =/= '%s'",
-                      attackStep.name.id, prevDef.name.start.posString(), attackStep.type, prevDef.type));
+                      attackStep.name.id, prevDef.name.getStart(), attackStep.type, prevDef.type));
             }
           }
         } else {
           // Attack step is defined in this scope, NOK
-          error(attackStep.name, String.format("Attack step '%s' previously defined at %s", attackStep.name.id,
-              prevDef.name.start.posString()));
+          error(attackStep.name,
+              String.format("Attack step '%s' previously defined at %s", attackStep.name.id, prevDef.name.getStart()));
         }
       }
     }
@@ -551,7 +551,7 @@ public class Analyzer {
       } else {
         // Field previously defined as attack step
         error(field,
-            String.format("Field '%s' previously defined as attack step at %s", field.id, prevStep.start.posString()));
+            String.format("Field '%s' previously defined as attack step at %s", field.id, prevStep.getStart()));
       }
     } else {
       // Field previously defined
@@ -562,7 +562,7 @@ public class Analyzer {
         prevField = prevDef.leftField;
       }
       error(field, String.format("Field %s.%s previously defined for asset at %s", parent.name.id, field.id,
-          prevField.start.posString()));
+          prevField.getStart()));
     }
   }
 
@@ -573,7 +573,7 @@ public class Analyzer {
       scope.add(variable.name.id, variable);
     } else {
       error(variable.name,
-          String.format("Variable '%s' previously defined at %s", variable.name.id, prevDef.name.start.posString()));
+          String.format("Variable '%s' previously defined at %s", variable.name.id, prevDef.name.getStart()));
     }
   }
 
@@ -848,11 +848,11 @@ public class Analyzer {
     // LOGGER.error(msg);
   }
 
-  private void error(Location location, String message) {
+  private void error(MalLocation location, String message) {
     ast.diagnostics.error(location, message);
   }
 
-  private void warning(Location location, String message) {
+  private void warning(MalLocation location, String message) {
     ast.diagnostics.warn(location, message);
   }
 }

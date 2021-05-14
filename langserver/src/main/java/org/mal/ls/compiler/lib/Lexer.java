@@ -25,6 +25,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 
+import org.eclipse.lsp4j.Position;
 import org.mal.ls.compiler.lib.TokenError.TokenErrorType;
 
 public class Lexer {
@@ -126,8 +127,8 @@ public class Lexer {
     return new String(byteArray, StandardCharsets.UTF_8);
   }
 
-  private Location getLocation() {
-    return new Location(filename, new Position(startLine - 1, startCol - 1), new Position(line - 1, col - 1));
+  private MalLocation getLocation() {
+    return new MalLocation(filename, new Position(startLine - 1, startCol - 1), new Position(line - 1, col - 1));
   }
 
   public Token next() {
