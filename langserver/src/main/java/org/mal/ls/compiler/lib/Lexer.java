@@ -25,6 +25,8 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 
+import org.mal.ls.compiler.lib.TokenError.TokenErrorType;
+
 public class Lexer {
   private MalLogger LOGGER;
   private String filename;
@@ -35,7 +37,7 @@ public class Lexer {
   private int startLine;
   private int startCol;
   private List<Byte> lexeme;
-  private List<SyntaxError> errors;
+  private List<TokenError> errors;
   private List<Token> comments = new ArrayList<>();
   private boolean eof;
 
@@ -103,21 +105,17 @@ public class Lexer {
   }
 
   public static boolean syntacticallyEqual(Lexer l1, Lexer l2) {
-    try {
-      var tok1 = l1.next();
-      var tok2 = l2.next();
-      while (tok1.type != TokenType.EOF && tok2.type != TokenType.EOF) {
-        if (tok1.type != tok2.type || !tok1.stringValue.equals(tok2.stringValue) || tok1.intValue != tok2.intValue
-            || tok1.doubleValue != tok2.doubleValue) {
-          return false;
-        }
-        tok1 = l1.next();
-        tok2 = l2.next();
+    var tok1 = l1.next();
+    var tok2 = l2.next();
+    while (tok1.type != TokenType.EOF && tok2.type != TokenType.EOF) {
+      if (tok1.type != tok2.type || !tok1.stringValue.equals(tok2.stringValue) || tok1.intValue != tok2.intValue
+          || tok1.doubleValue != tok2.doubleValue) {
+        return false;
       }
-      return tok1.type == TokenType.EOF && tok2.type == TokenType.EOF;
-    } catch (CompilerException e) {
-      return false;
+      tok1 = l1.next();
+      tok2 = l2.next();
     }
+    return tok1.type == TokenType.EOF && tok2.type == TokenType.EOF;
   }
 
   private String getLexemeString() {
@@ -128,7 +126,11 @@ public class Lexer {
     return new String(byteArray, StandardCharsets.UTF_8);
   }
 
-  public Token next() throws CompilerException {
+  private Location getLocation() {
+    return new Location(filename, new Position(startLine - 1, startCol - 1), new Position(line - 1, col - 1));
+  }
+
+  public Token next() {
     startLine = line;
     startCol = col;
     lexeme = new ArrayList<>();
@@ -139,188 +141,189 @@ public class Lexer {
     }
     byte c = consume();
     switch (c) {
-    case ' ':
-    case '\t':
-    case '\r':
-    case '\n':
-      return next();
-    case '#':
-      return createToken(TokenType.HASH);
-    case ':':
-      return createToken(TokenType.COLON);
-    case '{':
-      return createToken(TokenType.LCURLY);
-    case '}':
-      return createToken(TokenType.RCURLY);
-    case '+':
-      if (peek('>')) {
-        consume();
-        return createToken(TokenType.INHERIT);
-      } else {
-        return createToken(TokenType.PLUS);
-      }
-    case '-':
-      if (peek('>')) {
-        consume();
-        return createToken(TokenType.OVERRIDE);
-      } else if (peek("->")) {
-        consume(2);
-        return createToken(TokenType.RARROW);
-      } else {
-        return createToken(TokenType.MINUS);
-      }
-    case '&':
-      return createToken(TokenType.ALL);
-    case '|':
-      return createToken(TokenType.ANY);
-    case '!':
-      if (peek('E')) {
-        consume();
-        return createToken(TokenType.NOTEXIST);
-      } else {
-        return createToken(TokenType.UNRECOGNIZEDTOKEN);
-      }
-    case '@':
-      return createToken(TokenType.AT);
-    case '[':
-      return createToken(TokenType.LBRACKET);
-    case ']':
-      return createToken(TokenType.RBRACKET);
-    case '(':
-      return createToken(TokenType.LPAREN);
-    case ')':
-      return createToken(TokenType.RPAREN);
-    case ',':
-      return createToken(TokenType.COMMA);
-    case '<':
-      if (peek("--")) {
-        consume(2);
-        return createToken(TokenType.LARROW);
-      } else if (peek('-')) {
-        consume();
-        return createToken(TokenType.REQUIRE);
-      } else {
-        return createToken(TokenType.UNRECOGNIZEDTOKEN);
-      }
-    case '=':
-      return createToken(TokenType.ASSIGN);
-    case '\\':
-      if (peek('/')) {
-        consume();
-        return createToken(TokenType.UNION);
-      } else {
-        return createToken(TokenType.UNRECOGNIZEDTOKEN);
-      }
-    case '/':
-      if (peek('\\')) {
-        consume();
-        return createToken(TokenType.INTERSECT);
-      } else if (peek('/')) {
-        while (!eof && !peek('\n') && !peek('\r')) {
-          consume();
-        }
-        createComment(TokenType.SINGLECOMMENT);
+      case ' ':
+      case '\t':
+      case '\r':
+      case '\n':
         return next();
-      } else if (peek('*')) {
-        consume();
-        while (!peek("*/")) {
-          if (eof) {
-            createComment(TokenType.MULTICOMMENT);
-            return next();
-          }
+      case '#':
+        return createToken(TokenType.HASH);
+      case ':':
+        return createToken(TokenType.COLON);
+      case '{':
+        return createToken(TokenType.LCURLY);
+      case '}':
+        return createToken(TokenType.RCURLY);
+      case '+':
+        if (peek('>')) {
           consume();
+          return createToken(TokenType.INHERIT);
+        } else {
+          return createToken(TokenType.PLUS);
         }
-        consume(2);
-        createComment(TokenType.MULTICOMMENT);
-        return next();
-      } else {
-        return createToken(TokenType.DIVIDE);
-      }
-    case '.':
-      if (peek('.')) {
-        consume();
-        return createToken(TokenType.RANGE);
-      } else {
-        return createToken(TokenType.DOT);
-      }
-    case '*':
-      return createToken(TokenType.STAR);
-    case '^':
-      return createToken(TokenType.POWER);
-    case '"':
-      boolean closed = true;
-      boolean invalidEscape = false;
-      while (!peek('"')) {
-        if (closed) {
-          if (peek('\n')) {
-            closed = false;
-          }
+      case '-':
+        if (peek('>')) {
+          consume();
+          return createToken(TokenType.OVERRIDE);
+        } else if (peek("->")) {
+          consume(2);
+          return createToken(TokenType.RARROW);
+        } else {
+          return createToken(TokenType.MINUS);
         }
+      case '&':
+        return createToken(TokenType.ALL);
+      case '|':
+        return createToken(TokenType.ANY);
+      case '!':
+        if (peek('E')) {
+          consume();
+          return createToken(TokenType.NOTEXIST);
+        } else {
+          return createToken(TokenType.UNRECOGNIZEDTOKEN);
+        }
+      case '@':
+        return createToken(TokenType.AT);
+      case '[':
+        return createToken(TokenType.LBRACKET);
+      case ']':
+        return createToken(TokenType.RBRACKET);
+      case '(':
+        return createToken(TokenType.LPAREN);
+      case ')':
+        return createToken(TokenType.RPAREN);
+      case ',':
+        return createToken(TokenType.COMMA);
+      case '<':
+        if (peek("--")) {
+          consume(2);
+          return createToken(TokenType.LARROW);
+        } else if (peek('-')) {
+          consume();
+          return createToken(TokenType.REQUIRE);
+        } else {
+          return createToken(TokenType.UNRECOGNIZEDTOKEN);
+        }
+      case '=':
+        return createToken(TokenType.ASSIGN);
+      case '\\':
+        if (peek('/')) {
+          consume();
+          return createToken(TokenType.UNION);
+        } else {
+          return createToken(TokenType.UNRECOGNIZEDTOKEN);
+        }
+      case '/':
         if (peek('\\')) {
           consume();
-          if (eof) {
-            // Unterminated string starting at %s, new Position(startLine, startCol)
-            errors.add(new SyntaxError(SyntaxErrorType.UNTERMINATEDSTRING));
-            return createToken(TokenType.STRING);
+          return createToken(TokenType.INTERSECT);
+        } else if (peek('/')) {
+          while (!eof && !peek('\n') && !peek('\r')) {
+            consume();
           }
-          if (input[index] < 32 || input[index] > 126) {
-            throw exception(String.format("Invalid escape byte 0x%02X", input[index]));
-          }
+          createComment(TokenType.SINGLECOMMENT);
+          return next();
+        } else if (peek('*')) {
           consume();
-          if (!invalidEscape) {
-            var lexemeString = getLexemeString();
-            String escapeSequence = lexemeString.substring(lexemeString.length() - 2);
-            // lexeme = lexeme.subList(0, lexeme.size() - 2);
-            if (!escapeSequences.containsKey(escapeSequence)) {
-              // Invalid escape sequence '%s'", escapeSequence; }
-              errors.add(new SyntaxError(SyntaxErrorType.INVALIDESCAPESEQUENCE));
+          while (!peek("*/")) {
+            if (eof) {
+              createComment(TokenType.MULTICOMMENT);
+              return next();
             }
-            invalidEscape = true;
+            consume();
           }
-          // lexeme.add(escapeSequences.get(escapeSequence));
-        } else if (eof) {
-          // Unterminated string starting at %s, new Position(startLine, startCol)
-          errors.add(new SyntaxError(SyntaxErrorType.UNTERMINATEDSTRING));
-          return createToken(TokenType.STRING);
+          consume(2);
+          createComment(TokenType.MULTICOMMENT);
+          return next();
         } else {
-          consume();
+          return createToken(TokenType.DIVIDE);
         }
-      }
-      consume();
-      if (!closed) {
-        errors.add(new SyntaxError(SyntaxErrorType.UNTERMINATEDSTRING));
-      }
-      return createToken(TokenType.STRING);
-    default:
-      if (isAlpha(c)) {
-        while (isAlphaNumeric()) {
+      case '.':
+        if (peek('.')) {
           consume();
-        }
-        var lexemeString = getLexemeString();
-        if (keywords.containsKey(lexemeString)) {
-          return createToken(keywords.get(lexemeString));
+          return createToken(TokenType.RANGE);
         } else {
-          return createToken(TokenType.ID);
+          return createToken(TokenType.DOT);
         }
-      } else if (isDigit(c)) {
-        while (isDigit()) {
-          consume();
+      case '*':
+        return createToken(TokenType.STAR);
+      case '^':
+        return createToken(TokenType.POWER);
+      case '"':
+        boolean closed = true;
+        boolean invalidEscape = false;
+        while (!peek('"')) {
+          if (closed) {
+            if (peek('\n')) {
+              closed = false;
+            }
+          }
+          if (peek('\\')) {
+            consume();
+            if (eof) {
+              // Unterminated string starting at %s, new Position(startLine, startCol)
+              errors.add(new TokenError(TokenErrorType.UNTERMINATEDSTRING));
+              return createToken(TokenType.STRING);
+            }
+            // TODO
+            // if (input[index] < 32 || input[index] > 126) {
+            // throw exception(String.format("Invalid escape byte 0x%02X", input[index]));
+            // }
+            consume();
+            if (!invalidEscape) {
+              var lexemeString = getLexemeString();
+              String escapeSequence = lexemeString.substring(lexemeString.length() - 2);
+              // lexeme = lexeme.subList(0, lexeme.size() - 2);
+              if (!escapeSequences.containsKey(escapeSequence)) {
+                // Invalid escape sequence '%s'", escapeSequence; }
+                errors.add(new TokenError(TokenErrorType.INVALIDESCAPESEQUENCE));
+              }
+              invalidEscape = true;
+            }
+            // lexeme.add(escapeSequences.get(escapeSequence));
+          } else if (eof) {
+            // Unterminated string starting at %s, new Position(startLine, startCol)
+            errors.add(new TokenError(TokenErrorType.UNTERMINATEDSTRING));
+            return createToken(TokenType.STRING);
+          } else {
+            consume();
+          }
         }
-        if (peek("..") || !peek('.')) {
-          return createToken(TokenType.INT);
-        } else if (peek('.')) {
-          consume();
+        consume();
+        if (!closed) {
+          errors.add(new TokenError(TokenErrorType.UNTERMINATEDSTRING));
+        }
+        return createToken(TokenType.STRING);
+      default:
+        if (isAlpha(c)) {
+          while (isAlphaNumeric()) {
+            consume();
+          }
+          var lexemeString = getLexemeString();
+          if (keywords.containsKey(lexemeString)) {
+            return createToken(keywords.get(lexemeString));
+          } else {
+            return createToken(TokenType.ID);
+          }
+        } else if (isDigit(c)) {
           while (isDigit()) {
             consume();
           }
-          return createToken(TokenType.FLOAT);
+          if (peek("..") || !peek('.')) {
+            return createToken(TokenType.INT);
+          } else if (peek('.')) {
+            consume();
+            while (isDigit()) {
+              consume();
+            }
+            return createToken(TokenType.FLOAT);
+          }
         }
-      }
-      if (c < 0) {
-        return createToken(TokenType.UNRECOGNIZEDTOKEN);
-      } else {
-        return createToken(TokenType.UNRECOGNIZEDTOKEN);
-      }
+        if (c < 0) {
+          return createToken(TokenType.UNRECOGNIZEDTOKEN);
+        } else {
+          return createToken(TokenType.UNRECOGNIZEDTOKEN);
+        }
     }
   }
 
@@ -379,30 +382,27 @@ public class Lexer {
     if (type == TokenType.MULTICOMMENT) {
       lexemeString = lexemeString.substring(0, lexemeString.length() - 2);
     }
-    comments.add(new Token(type, filename, new Position(startLine, startCol), new Position(line, col), lexemeString));
+    comments.add(new Token(type, getLocation(), lexemeString));
   }
 
   private Token createRawToken(TokenType type) {
     switch (type) {
-    case INT:
-      return new Token(type, filename, new Position(startLine, startCol), new Position(line, col),
-          Integer.parseInt(getLexemeString()));
-    case FLOAT:
-      return new Token(type, filename, new Position(startLine, startCol), new Position(line, col),
-          Double.parseDouble(getLexemeString()));
-    case ID:
-    case UNRECOGNIZEDTOKEN:
-      return new Token(type, filename, new Position(startLine, startCol), new Position(line, col), getLexemeString());
-    case STRING:
-      var lexemeString = getLexemeString();
-      return new Token(type, filename, new Position(startLine, startCol), new Position(line, col),
-          lexemeString.substring(1, lexemeString.length() - 1), errors);
-    default:
-      return new Token(type, filename, new Position(startLine, startCol), new Position(line, col));
+      case INT:
+        return new Token(type, getLocation(), Integer.parseInt(getLexemeString()));
+      case FLOAT:
+        return new Token(type, getLocation(), Double.parseDouble(getLexemeString()));
+      case ID:
+      case UNRECOGNIZEDTOKEN:
+        return new Token(type, getLocation(), getLexemeString());
+      case STRING:
+        var lexemeString = getLexemeString();
+        return new Token(type, getLocation(), lexemeString.substring(1, lexemeString.length() - 1), errors);
+      default:
+        return new Token(type, getLocation());
     }
   }
 
-  private void readTrailingComments() throws CompilerException {
+  private void readTrailingComments() {
     // Trailing comments are all comments followed on the same line as the previous
     // token, including comments that follow previous trailing comments by exactly 1
     // line.
@@ -414,47 +414,47 @@ public class Lexer {
     }
     byte c = consume();
     switch (c) {
-    case ' ':
-    case '\t':
-      readTrailingComments();
-      return;
-    case '/':
-      if (peek('/')) {
-        while (!eof && !peek('\n') && !peek('\r')) {
-          consume();
-        }
-        createComment(TokenType.SINGLECOMMENT);
-        if (peek("\r\n")) {
-          consume(2);
-          readTrailingComments();
-        } else if (peek('\n')) {
-          consume();
-          readTrailingComments();
-        }
-        return;
-      } else if (peek('*')) {
-        consume();
-        while (!peek("*/")) {
-          if (eof) {
-            return;
-          }
-          consume();
-        }
-        consume(2);
-        createComment(TokenType.MULTICOMMENT);
+      case ' ':
+      case '\t':
         readTrailingComments();
         return;
-      }
-      // Not a comment, we want to fall-through
-    default:
-      index--;
-      col--;
-      eof = false;
-      return;
+      case '/':
+        if (peek('/')) {
+          while (!eof && !peek('\n') && !peek('\r')) {
+            consume();
+          }
+          createComment(TokenType.SINGLECOMMENT);
+          if (peek("\r\n")) {
+            consume(2);
+            readTrailingComments();
+          } else if (peek('\n')) {
+            consume();
+            readTrailingComments();
+          }
+          return;
+        } else if (peek('*')) {
+          consume();
+          while (!peek("*/")) {
+            if (eof) {
+              return;
+            }
+            consume();
+          }
+          consume(2);
+          createComment(TokenType.MULTICOMMENT);
+          readTrailingComments();
+          return;
+        }
+        // Not a comment, we want to fall-through
+      default:
+        index--;
+        col--;
+        eof = false;
+        return;
     }
   }
 
-  private Token createToken(TokenType type) throws CompilerException {
+  private Token createToken(TokenType type) {
     var token = createRawToken(type);
     var preComments = List.copyOf(comments);
     comments.clear();
@@ -462,18 +462,6 @@ public class Lexer {
     var postComments = List.copyOf(comments);
     comments.clear();
     return new Token(token, preComments, postComments);
-  }
-
-  private CompilerException exception(String msg) {
-    Position pos = null;
-    if (eof) {
-      pos = new Position(line, col);
-    } else {
-      pos = new Position(startLine, startCol);
-    }
-    LOGGER.error(pos, msg);
-    LOGGER.print();
-    return new CompilerException("There were syntax errors");
   }
 
   private boolean isDigit() {

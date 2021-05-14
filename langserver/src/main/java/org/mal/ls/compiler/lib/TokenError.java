@@ -1,10 +1,20 @@
 package org.mal.ls.compiler.lib;
 
-public class SyntaxError {
-  public final SyntaxErrorType type;
+public class TokenError {
+  public final TokenErrorType type;
 
-  public SyntaxError(SyntaxErrorType type) {
+  public TokenError(TokenErrorType type) {
     this.type = type;
+  }
+
+  public enum TokenErrorType {
+    UNTERMINATEDSTRING("unterminated string"), INVALIDESCAPESEQUENCE("invalid escape sequence");
+
+    private final String string;
+
+    private TokenErrorType(String string) {
+      this.string = string;
+    }
   }
 
   @Override

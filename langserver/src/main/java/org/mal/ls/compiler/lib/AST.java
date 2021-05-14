@@ -20,17 +20,13 @@ import java.util.List;
 import java.util.Optional;
 
 public class AST {
+  public MalDiagnostics diagnostics = new MalDiagnostics();
   private List<Category> categories = new ArrayList<>();
   private List<Association> associations = new ArrayList<>();
   private List<Define> defines = new ArrayList<>();
 
-  @Override
-  public String toString() {
-    var sb = new StringBuilder();
-    sb.append(String.format("%s,%n", Define.listToString(defines, 0)));
-    sb.append(String.format("%s,%n", Category.listToString(categories, 0)));
-    sb.append(String.format("%s%n", Association.listToString(associations, 0)));
-    return sb.toString();
+  public AST() {
+    super();
   }
 
   public void include(AST other) {
@@ -69,21 +65,35 @@ public class AST {
     this.defines.add(define);
   }
 
+  @Override
+  public String toString() {
+    var sb = new StringBuilder();
+    sb.append(String.format("%s,%n", Define.listToString(defines, 0)));
+    sb.append(String.format("%s,%n", Category.listToString(categories, 0)));
+    sb.append(String.format("%s%n", Association.listToString(associations, 0)));
+    return sb.toString();
+  }
+
   public static class ID extends Location {
     public final String id;
 
-    public ID(Location pos, String id) {
-      super(pos);
+    public ID(Location location, String id) {
+      super(location);
       this.id = id;
     }
-    
-    public String getId() {
-      return this.id;
+
+    public ID(Token token) {
+      super(token);
+      this.id = token.stringValue;
     }
-    
+
     @Override
     public String toString() {
-      return String.format("ID(%s, \"%s\")", locationString(), id);
+      if (id.equals("")) {
+        return "ID: missing";
+      } else {
+        return String.format("ID: \"%s\", (%s)", id, locationString());
+      }
     }
   }
 
@@ -91,27 +101,36 @@ public class AST {
     public final ID key;
     public final String value;
 
-    public Define(Location pos, ID key, String value) {
-      super(pos);
+    public Define(Location firstLocation, ID key, Token string) {
+      super(new Location(firstLocation.filename, firstLocation.start, string.end));
       this.key = key;
-      this.value = value;
-    }
-
-    @Override
-    public String toString() {
-      return String.format("Define(%s, %s, \"%s\")", locationString(), key.toString(), value);
+      this.value = string.stringValue;
     }
 
     public static String listToString(List<Define> defines, int spaces) {
       var indent = " ".repeat(spaces);
       var sb = new StringBuilder();
-      sb.append(String.format("%sdefines = {%n", indent));
+      sb.append(String.format("%sdefines = [%n", indent));
       for (int i = 0; i < defines.size(); i++) {
-        sb.append(String.format("%s  %s", indent, defines.get(i).toString()));
+        sb.append(defines.get(i).toString(spaces + 1));
         if (i < defines.size() - 1) {
           sb.append(',');
         }
-        sb.append(String.format("%n"));
+        sb.append('\n');
+      }
+      sb.append(String.format("%s]", indent));
+      return sb.toString();
+    }
+
+    public String toString(int spaces) {
+      String indent = " ".repeat(spaces);
+      StringBuilder sb = new StringBuilder();
+      sb.append(String.format("%sdefine{%n", indent));
+      sb.append(String.format("%s %s%n", indent, key.toString()));
+      if (value.equals("")) {
+        sb.append(String.format("%sstring: missing%n", indent));
+      } else {
+        sb.append(String.format("%sstring: \"%s\"%n", indent, value));
       }
       sb.append(String.format("%s}", indent));
       return sb.toString();
@@ -122,35 +141,40 @@ public class AST {
     public final ID type;
     public final String string;
 
-    public Meta(Location pos, ID type, String string) {
-      super(pos);
+    public Meta(Location firstLocation, ID type, Token string) {
+      super(new Location(firstLocation.filename, firstLocation.start, string.end));
       this.type = type;
-      this.string = string;
+      this.string = string.stringValue;
     }
 
-    public String getString() {
-      return this.string;
-    }
-
-    @Override
-    public String toString() {
-      return String.format("Meta(%s, %s, \"%s\")", locationString(), type.toString(), string);
+    public String toString(int spaces) {
+      String indent = " ".repeat(spaces);
+      StringBuilder sb = new StringBuilder();
+      sb.append(String.format("%smeta{%n", indent));
+      if (string.equals("")) {
+        sb.append(String.format("%sstring: missing%n", indent));
+      } else {
+        sb.append(String.format("%sstring: \"%s\"%n", indent, string));
+      }
+      sb.append(String.format("%s}", indent));
+      return sb.toString();
     }
 
     public static String listToString(List<Meta> meta, int spaces) {
       var indent = " ".repeat(spaces);
       var sb = new StringBuilder();
-      sb.append(String.format("%smeta = {%n", indent));
+      sb.append(String.format("%smetas = [%n", indent));
       for (int i = 0; i < meta.size(); i++) {
-        sb.append(String.format("%s  %s", indent, meta.get(i).toString()));
+        sb.append(String.format("%s", meta.get(i).toString(spaces + 1)));
         if (i < meta.size() - 1) {
           sb.append(',');
         }
-        sb.append(String.format("%n"));
+        sb.append('\n');
       }
-      sb.append(String.format("%s}", indent));
+      sb.append(String.format("%s]", indent));
       return sb.toString();
     }
+
   }
 
   public static class Category extends Location {
@@ -158,8 +182,8 @@ public class AST {
     public final List<Meta> meta;
     public final List<Asset> assets;
 
-    public Category(Location pos, ID name, List<Meta> meta, List<Asset> assets) {
-      super(pos);
+    public Category(Location location, ID name, List<Meta> meta, List<Asset> assets) {
+      super(location);
       this.name = name;
       this.meta = meta;
       this.assets = assets;
@@ -177,30 +201,38 @@ public class AST {
       return this.assets;
     }
 
+    public List<Asset> getAssets() {
+      List<Asset> assets = new ArrayList<>();
+      assets.addAll(this.assets);
+      return assets;
+    }
+
     public String toString(int spaces) {
-      var indent = " ".repeat(spaces);
-      var sb = new StringBuilder();
-      sb.append(String.format("%sCategory(%s, %s,%n", indent, locationString(), name.toString()));
-      sb.append(String.format("%s,%n", Meta.listToString(meta, spaces + 2)));
-      sb.append(String.format("%s%n", Asset.listToString(assets, spaces + 2)));
-      sb.append(String.format("%s)", indent));
+      String indent = " ".repeat(spaces);
+      StringBuilder sb = new StringBuilder();
+      sb.append(String.format("%scategory{%n", indent));
+      sb.append(String.format("%s %s%n", indent, name.toString()));
+      sb.append(String.format("%s%n", Meta.listToString(meta, spaces + 1)));
+      sb.append(String.format("%s%n", Asset.listToString(assets, spaces + 1)));
+      sb.append(String.format("%s}", indent));
       return sb.toString();
     }
 
     public static String listToString(List<Category> categories, int spaces) {
       var indent = " ".repeat(spaces);
       var sb = new StringBuilder();
-      sb.append(String.format("%scategories = {%n", indent));
+      sb.append(String.format("%scategories = [%n", indent));
       for (int i = 0; i < categories.size(); i++) {
-        sb.append(String.format("%s", categories.get(i).toString(spaces + 2)));
+        sb.append(String.format("%s", categories.get(i).toString(spaces + 1)));
         if (i < categories.size() - 1) {
           sb.append(',');
         }
-        sb.append(String.format("%n"));
+        sb.append('\n');
       }
-      sb.append(String.format("%s}", indent));
+      sb.append(String.format("%s]%n", indent));
       return sb.toString();
     }
+
   }
 
   public static class Asset extends Location {
@@ -235,30 +267,34 @@ public class AST {
     }
 
     public String toString(int spaces) {
-      var indent = " ".repeat(spaces);
-      var sb = new StringBuilder();
-      sb.append(
-          String.format("%sAsset(%s, %s, %s, %s,%n", indent, locationString(), isAbstract ? "ABSTRACT" : "NOT_ABSTRACT",
-              name.toString(), parent.isEmpty() ? "NO_PARENT" : String.format("PARENT(%s)", parent.get().toString())));
-      sb.append(String.format("%s,%n", Meta.listToString(meta, spaces + 2)));
-      sb.append(String.format("%s,%n", AttackStep.listToString(attackSteps, spaces + 2)));
-      sb.append(String.format("%s%n", Variable.listToString(variables, spaces + 2)));
-      sb.append(String.format("%s)", indent));
+      String indent = " ".repeat(spaces);
+      StringBuilder sb = new StringBuilder();
+      sb.append(String.format("%s{%n", indent));
+      sb.append(String.format("%s abstract: %s%n", indent, isAbstract));
+      if (parent.isPresent()) {
+        sb.append(String.format("%s parent: {%s}%n", indent, parent.get()));
+      } else {
+        sb.append(String.format("%s parent: {}%n", indent));
+      }
+      sb.append(String.format("%s%n", Meta.listToString(meta, spaces + 1)));
+      sb.append(String.format("%s%n", Variable.listToString(variables, spaces + 1)));
+      sb.append(String.format("%s%n", AttackStep.listToString(attackSteps, spaces + 1)));
+      sb.append(String.format("%s}", indent));
       return sb.toString();
     }
 
     public static String listToString(List<Asset> assets, int spaces) {
       var indent = " ".repeat(spaces);
       var sb = new StringBuilder();
-      sb.append(String.format("%sassets = {%n", indent));
+      sb.append(String.format("%sAssets = [%n", indent));
       for (int i = 0; i < assets.size(); i++) {
-        sb.append(String.format("%s", assets.get(i).toString(spaces + 2)));
+        sb.append(String.format("%s", assets.get(i).toString(spaces + 1)));
         if (i < assets.size() - 1) {
           sb.append(',');
         }
-        sb.append(String.format("%n"));
+        sb.append('\n');
       }
-      sb.append(String.format("%s}", indent));
+      sb.append(String.format("%s]", indent));
       return sb.toString();
     }
   }
@@ -277,9 +313,9 @@ public class AST {
     public final Optional<Requires> requires;
     public final Optional<Reaches> reaches;
 
-    public AttackStep(Location pos, AttackStepType type, ID name, List<ID> tags, Optional<List<CIA>> cia,
+    public AttackStep(Location location, AttackStepType type, ID name, List<ID> tags, Optional<List<CIA>> cia,
         Optional<TTCExpr> ttc, List<Meta> meta, Optional<Requires> requires, Optional<Reaches> reaches) {
-      super(pos);
+      super(location);
       this.type = type;
       this.name = name;
       this.tags = tags;
@@ -342,7 +378,7 @@ public class AST {
     public static String listToString(List<AttackStep> attackSteps, int spaces) {
       var indent = " ".repeat(spaces);
       var sb = new StringBuilder();
-      sb.append(String.format("%sattacksteps = {%n", indent));
+      sb.append(String.format("%sattacksteps = [%n", indent));
       for (int i = 0; i < attackSteps.size(); i++) {
         sb.append(String.format("%s", attackSteps.get(i).toString(spaces + 2)));
         if (i < attackSteps.size() - 1) {
@@ -350,7 +386,7 @@ public class AST {
         }
         sb.append(String.format("%n"));
       }
-      sb.append(String.format("%s}", indent));
+      sb.append(String.format("%s]", indent));
       return sb.toString();
     }
   }
@@ -371,8 +407,8 @@ public class AST {
   }
 
   public abstract static class TTCExpr extends Location {
-    public TTCExpr(Location pos) {
-      super(pos);
+    public TTCExpr(Location location) {
+      super(location);
     }
   }
 
@@ -380,16 +416,16 @@ public class AST {
     public final TTCExpr lhs;
     public final TTCExpr rhs;
 
-    public TTCBinaryExpr(Location pos, TTCExpr lhs, TTCExpr rhs) {
-      super(pos);
+    public TTCBinaryExpr(Location location, TTCExpr lhs, TTCExpr rhs) {
+      super(location);
       this.lhs = lhs;
       this.rhs = rhs;
     }
   }
 
   public static class TTCAddExpr extends TTCBinaryExpr {
-    public TTCAddExpr(Location pos, TTCExpr lhs, TTCExpr rhs) {
-      super(pos, lhs, rhs);
+    public TTCAddExpr(Location location, TTCExpr lhs, TTCExpr rhs) {
+      super(location, lhs, rhs);
     }
 
     @Override
@@ -399,8 +435,8 @@ public class AST {
   }
 
   public static class TTCSubExpr extends TTCBinaryExpr {
-    public TTCSubExpr(Location pos, TTCExpr lhs, TTCExpr rhs) {
-      super(pos, lhs, rhs);
+    public TTCSubExpr(Location location, TTCExpr lhs, TTCExpr rhs) {
+      super(location, lhs, rhs);
     }
 
     @Override
@@ -410,8 +446,8 @@ public class AST {
   }
 
   public static class TTCMulExpr extends TTCBinaryExpr {
-    public TTCMulExpr(Location pos, TTCExpr lhs, TTCExpr rhs) {
-      super(pos, lhs, rhs);
+    public TTCMulExpr(Location location, TTCExpr lhs, TTCExpr rhs) {
+      super(location, lhs, rhs);
     }
 
     @Override
@@ -421,8 +457,8 @@ public class AST {
   }
 
   public static class TTCDivExpr extends TTCBinaryExpr {
-    public TTCDivExpr(Location pos, TTCExpr lhs, TTCExpr rhs) {
-      super(pos, lhs, rhs);
+    public TTCDivExpr(Location location, TTCExpr lhs, TTCExpr rhs) {
+      super(location, lhs, rhs);
     }
 
     @Override
@@ -432,8 +468,8 @@ public class AST {
   }
 
   public static class TTCPowExpr extends TTCBinaryExpr {
-    public TTCPowExpr(Location pos, TTCExpr lhs, TTCExpr rhs) {
-      super(pos, lhs, rhs);
+    public TTCPowExpr(Location location, TTCExpr lhs, TTCExpr rhs) {
+      super(location, lhs, rhs);
     }
 
     @Override
@@ -446,8 +482,8 @@ public class AST {
     public final ID name;
     public final List<Double> params;
 
-    public TTCFuncExpr(Location pos, ID name, List<Double> params) {
-      super(pos);
+    public TTCFuncExpr(Location location, ID name, List<Double> params) {
+      super(location);
       this.name = name;
       this.params = params;
     }
@@ -467,8 +503,8 @@ public class AST {
   public static class TTCNumExpr extends TTCExpr {
     public final double value;
 
-    public TTCNumExpr(Location pos, double value) {
-      super(pos);
+    public TTCNumExpr(Location location, double value) {
+      super(location);
       this.value = value;
     }
 
@@ -481,8 +517,8 @@ public class AST {
   public static class Requires extends Location {
     public final List<Expr> requires;
 
-    public Requires(Location pos, List<Expr> requires) {
-      super(pos);
+    public Requires(Location location, List<Expr> requires) {
+      super(location);
       this.requires = requires;
     }
 
@@ -500,8 +536,8 @@ public class AST {
     public final boolean inherits;
     public final List<Expr> reaches;
 
-    public Reaches(Location pos, boolean inherits, List<Expr> reaches) {
-      super(pos);
+    public Reaches(Location location, boolean inherits, List<Expr> reaches) {
+      super(location);
       this.inherits = inherits;
       this.reaches = reaches;
     }
@@ -520,40 +556,40 @@ public class AST {
     public final ID name;
     public final Expr expr;
 
-    public Variable(Location pos, ID name, Expr expr) {
-      super(pos);
+    public Variable(Location location, ID name, Expr expr) {
+      super(location);
       this.name = name;
       this.expr = expr;
     }
 
-    public ID getName() {
-      return this.name;
-    }
-
-    @Override
-    public String toString() {
-      return String.format("Variable(%s, %s, %s)", locationString(), name.toString(), expr.toString());
+    public String toString(int spaces) {
+      String indent = " ".repeat(spaces);
+      StringBuilder sb = new StringBuilder();
+      sb.append(String.format("%svariable{%n", indent));
+      sb.append(String.format("%s %s%n", indent, expr));
+      sb.append(String.format("%s}", indent));
+      return sb.toString();
     }
 
     public static String listToString(List<Variable> variables, int spaces) {
       var indent = " ".repeat(spaces);
       var sb = new StringBuilder();
-      sb.append(String.format("%svariables = {%n", indent));
+      sb.append(String.format("%svariables = [%n", indent));
       for (int i = 0; i < variables.size(); i++) {
-        sb.append(String.format("%s  %s", indent, variables.get(i).toString()));
+        sb.append(String.format("%s", variables.get(i).toString(spaces + 1)));
         if (i < variables.size() - 1) {
           sb.append(',');
         }
-        sb.append(String.format("%n"));
+        sb.append('\n');
       }
-      sb.append(String.format("%s}", indent));
+      sb.append(String.format("%s]", indent));
       return sb.toString();
     }
   }
 
   public abstract static class Expr extends Location {
-    public Expr(Location pos) {
-      super(pos);
+    public Expr(Location location) {
+      super(location);
     }
 
     public static String listToString(List<Expr> exprs, String name, int spaces) {
@@ -573,19 +609,19 @@ public class AST {
   }
 
   public abstract static class BinaryExpr extends Expr {
-    public final Expr lhs;
-    public final Expr rhs;
+    public Expr lhs;
+    public Expr rhs;
 
-    public BinaryExpr(Location pos, Expr lhs, Expr rhs) {
-      super(pos);
+    public BinaryExpr(Location location, Expr lhs, Expr rhs) {
+      super(location);
       this.lhs = lhs;
       this.rhs = rhs;
     }
   }
 
   public static class UnionExpr extends BinaryExpr {
-    public UnionExpr(Location pos, Expr lhs, Expr rhs) {
-      super(pos, lhs, rhs);
+    public UnionExpr(Location location, Expr lhs, Expr rhs) {
+      super(location, lhs, rhs);
     }
 
     @Override
@@ -595,8 +631,8 @@ public class AST {
   }
 
   public static class DifferenceExpr extends BinaryExpr {
-    public DifferenceExpr(Location pos, Expr lhs, Expr rhs) {
-      super(pos, lhs, rhs);
+    public DifferenceExpr(Location location, Expr lhs, Expr rhs) {
+      super(location, lhs, rhs);
     }
 
     @Override
@@ -606,8 +642,8 @@ public class AST {
   }
 
   public static class IntersectionExpr extends BinaryExpr {
-    public IntersectionExpr(Location pos, Expr lhs, Expr rhs) {
-      super(pos, lhs, rhs);
+    public IntersectionExpr(Location location, Expr lhs, Expr rhs) {
+      super(location, lhs, rhs);
     }
 
     @Override
@@ -617,8 +653,8 @@ public class AST {
   }
 
   public static class StepExpr extends BinaryExpr {
-    public StepExpr(Location pos, Expr lhs, Expr rhs) {
-      super(pos, lhs, rhs);
+    public StepExpr(Location location, Expr lhs, Expr rhs) {
+      super(location, lhs, rhs);
     }
 
     @Override
@@ -630,15 +666,31 @@ public class AST {
   public abstract static class UnaryExpr extends Expr {
     public final Expr e;
 
-    public UnaryExpr(Location pos, Expr e) {
-      super(pos);
+    public UnaryExpr(Location location, Expr e) {
+      super(location);
       this.e = e;
     }
   }
 
+  public static class ParenExpr extends UnaryExpr {
+    public final Token lparen;
+    public final Token rparen;
+
+    public ParenExpr(Location location, Expr e, Token lparen, Token rparen) {
+      super(location, e);
+      this.lparen = lparen;
+      this.rparen = rparen;
+    }
+
+    @Override
+    public String toString() {
+      return String.format("ParenExpr(%s, %s)", locationString(), this.e);
+    }
+  }
+
   public static class TransitiveExpr extends UnaryExpr {
-    public TransitiveExpr(Location pos, Expr e) {
-      super(pos, e);
+    public TransitiveExpr(Location location, Expr e) {
+      super(location, e);
     }
 
     @Override
@@ -650,8 +702,8 @@ public class AST {
   public static class SubTypeExpr extends UnaryExpr {
     public final ID subType;
 
-    public SubTypeExpr(Location pos, Expr e, ID subType) {
-      super(pos, e);
+    public SubTypeExpr(Location location, Expr e, ID subType) {
+      super(location, e);
       this.subType = subType;
     }
 
@@ -664,8 +716,8 @@ public class AST {
   public static class IDExpr extends Expr {
     public final ID id;
 
-    public IDExpr(Location pos, ID id) {
-      super(pos);
+    public IDExpr(Location location, ID id) {
+      super(location);
       this.id = id;
     }
 
@@ -678,8 +730,8 @@ public class AST {
   public static class CallExpr extends Expr {
     public final ID id;
 
-    public CallExpr(Location pos, ID id) {
-      super(pos);
+    public CallExpr(Location location, ID id) {
+      super(location);
       this.id = id;
     }
 
@@ -699,9 +751,9 @@ public class AST {
     public final ID rightAsset;
     public final List<Meta> meta;
 
-    public Association(Location pos, ID leftAsset, ID leftField, Multiplicity leftMult, ID linkName,
+    public Association(Location location, ID leftAsset, ID leftField, Multiplicity leftMult, ID linkName,
         Multiplicity rightMult, ID rightField, ID rightAsset, List<Meta> meta) {
-      super(pos);
+      super(location);
       this.leftAsset = leftAsset;
       this.leftField = leftField;
       this.leftMult = leftMult;
@@ -745,7 +797,7 @@ public class AST {
   }
 
   public enum Multiplicity {
-    ZERO_OR_ONE("0..1"), ZERO_OR_MORE("*"), ONE("1"), ONE_OR_MORE("1..*");
+    ZERO_OR_ONE("0..1"), ZERO_OR_MORE("*"), ONE("1"), ONE_OR_MORE("1..*"), INVALID("invalid");
 
     private String string;
 

@@ -76,7 +76,7 @@ public class MalTextDocumentService implements TextDocumentService {
   }
 
   /**
-   * Creates and returns a list of completion items 
+   * Creates and returns a list of completion items
    */
   @Override
   public CompletableFuture<Either<List<CompletionItem>, CompletionList>> completion(CompletionParams completionParams) {
@@ -84,7 +84,6 @@ public class MalTextDocumentService implements TextDocumentService {
     ciHandler.setCursorPos(completionParams.getPosition());
     Map<String, CompletionItem> ciHashMap = ciHandler.getciHashMap();
     ciHandler.addCompletionItemASTNames(this.ast, completionItems);
-
     return CompletableFuture.supplyAsync(() -> {
       for (Map.Entry<String, CompletionItem> ci : ciHashMap.entrySet())
         completionItems.add(ci.getValue());

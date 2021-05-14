@@ -27,8 +27,10 @@ import java.util.Set;
 
 public class Parser {
   private MalLogger LOGGER;
+  private AST ast;
   private Lexer lex;
   private Token tok;
+  private Token prev;
   private Set<File> included;
   private File currentFile;
   private Path originPath;
@@ -54,391 +56,440 @@ public class Parser {
     this.originPath = originPath;
   }
 
-  public static AST parse(File file) throws IOException, CompilerException {
+  public static AST parse(File file) throws IOException {
     return parse(file, false, false);
   }
 
-  public static AST parse(File file, boolean verbose, boolean debug) throws IOException, CompilerException {
-    return new Parser(file, verbose, debug).parseLog();
+  public static AST parse(File file, boolean verbose, boolean debug) throws IOException {
+    return new Parser(file, verbose, debug)._parse();
   }
 
   private static AST parse(File file, Path originPath, Set<File> included, boolean verbose, boolean debug)
-      throws IOException, CompilerException {
-    return new Parser(file, originPath, included, verbose, debug).parseLog();
+      throws IOException {
+    return new Parser(file, originPath, included, verbose, debug)._parse();
   }
 
-  private AST parseLog() throws CompilerException {
-    try {
-      var ast = _parse();
-      LOGGER.print();
-      return ast;
-    } catch (CompilerException e) {
-      LOGGER.print();
-      throw e;
-    }
-  }
-
-  // The first set of <mal>
-  private static TokenType[] malFirst = { TokenType.CATEGORY, TokenType.ASSOCIATIONS, TokenType.INCLUDE,
-      TokenType.HASH };
-
-  // The first set of <asset>
-  private static TokenType[] assetFirst = { TokenType.ABSTRACT, TokenType.ASSET };
-
-  // The first set of <attackstep>
-  private static TokenType[] attackStepFirst = { TokenType.ALL, TokenType.ANY, TokenType.HASH, TokenType.EXIST,
-      TokenType.NOTEXIST };
-
-  private void _next() throws CompilerException {
+  private void _next() {
+    prev = tok;
     tok = lex.next();
   }
 
-  private void _expect(TokenType type) throws CompilerException {
-    if (tok.type != type) {
-      throw exception(type);
+  private void _skip() {
+    tok = lex.next();
+  }
+
+  private void expected(TokenType type) {
+    ast.diagnostics.error(prev, String.format("Syntax error on token '%s', expected %s after this token", prev, type));
+  }
+
+  private void expected(String expected) {
+    ast.diagnostics.error(prev,
+        String.format("Syntax error on token '%s', expected %s after this token", prev, expected));
+  }
+
+  private void skipNotInScope(ParserScope scope) {
+    List<Token> skipped = new ArrayList<>();
+    while (!scope.expects(tok.type)) {
+      skipped.add(tok);
+      _skip();
     }
-    _next();
+    if (!skipped.isEmpty()) {
+      if (skipped.size() > 1) {
+        StringBuilder sb = new StringBuilder();
+        sb.append("Syntax error on tokens ");
+        for (int i = 0; i < skipped.size(); i++) {
+          sb.append(String.format("'%s'", skipped.get(i)));
+          if (i == skipped.size() - 2) {
+            sb.append(" and ");
+          } else {
+            sb.append(", ");
+          }
+        }
+        sb.append("delete these tokens.");
+        ast.diagnostics.error(new Location(tok.filename, skipped.get(0).start, skipped.get(skipped.size() - 1).end),
+            sb.toString());
+      } else {
+        ast.diagnostics.error(skipped.get(0),
+            String.format("Syntax error on token '%s', delete this token.", skipped.get(0)));
+      }
+    }
+  }
+
+  // eats token and removes it from current context.
+  private Token eat(TokenType type, ParserScope scope) {
+    Token token = eat2(type, scope);
+    scope.remove(type);
+    return token;
+  }
+
+  // eat without removing from context.
+  private Token eat2(TokenType type, ParserScope scope) {
+    skipNotInScope(scope);
+    Token token = this.tok;
+    if (token.type == type) {
+      _next();
+      return token;
+    }
+    expected(type);
+    return new MissingToken(type, prev);
+  }
+
+  private Token eatEitherFromScope(ParserScope scope, String expected) {
+    skipNotInScope(scope);
+    if (scope.contains(tok.type)) {
+      return tok;
+    }
+    expected(expected);
+    // TODO tokentype
+    return new MissingToken(TokenType.UNRECOGNIZEDTOKEN, prev);
+  }
+
+  private Token eatOptional(TokenType type) {
+    Token token = this.tok;
+    if (token.type == type) {
+      _next();
+      return token;
+    }
+    return null;
   }
 
   // <mal> ::= (<category> | <associations> | <include> | <define>)* EOF
-  private AST _parse() throws CompilerException {
-    var ast = new AST();
+  private AST _parse() {
+    ast = new AST();
+    ParserScope scope = new ParserScope(TokenSet.ROOT);
     _next();
-
     while (true) {
+      Token token = tok;
       switch (tok.type) {
-      case CATEGORY:
-        var category = _parseCategory();
-        ast.addCategory(category);
-        break;
-      case ASSOCIATIONS:
-        var associations = _parseAssociations();
-        ast.addAssociations(associations);
-        break;
-      case INCLUDE:
-        var include = _parseInclude();
-        ast.include(include);
-        break;
-      case HASH:
-        var define = _parseDefine();
-        ast.addDefine(define);
-        break;
-      case EOF:
-        return ast;
-      default:
-        throw exception(malFirst);
+        case CATEGORY:
+          _next();
+          ast.addCategory(_parseCategory(scope, token));
+          break;
+        case ASSOCIATIONS:
+          _next();
+          ast.addAssociations(_parseAssociations(scope));
+          break;
+        case INCLUDE:
+          _next();
+          ast.include(_parseInclude(scope));
+          break;
+        case HASH:
+          _next();
+          ast.addDefine(_parseDefine(scope, token));
+          break;
+        case EOF:
+          return ast;
+        default:
+          ast.diagnostics.error(tok, String.format("Syntax error on token '%s', delete this token", tok));
+          _next();
       }
     }
   }
 
   // ID
-  private AST.ID _parseID() throws CompilerException {
-    switch (tok.type) {
-    case ID:
-      var id = new AST.ID(tok, tok.stringValue);
-      _next();
-      return id;
-    default:
-      throw exception(TokenType.ID);
-    }
-  }
-
-  // STRING
-  private String _parseString() throws CompilerException {
-    switch (tok.type) {
-    case STRING:
-      var str = tok.stringValue;
-      _next();
-      return str;
-    default:
-      throw exception(TokenType.STRING);
-    }
+  private AST.ID _parseID(ParserScope parentScope) {
+    ParserScope scope = new ParserScope(TokenType.ID, parentScope);
+    var id = eat(TokenType.ID, scope);
+    return new AST.ID(id);
   }
 
   // <define> ::= HASH ID COLON STRING
-  private AST.Define _parseDefine() throws CompilerException {
-    var firstToken = tok;
+  private AST.Define _parseDefine(ParserScope parentScope, Token firstToken) {
+    ParserScope scope = new ParserScope(TokenSet.DEFINE, parentScope);
+    var id = _parseID(scope);
+    eat(TokenType.COLON, scope);
+    var string = eat(TokenType.STRING, scope);
 
-    _expect(TokenType.HASH);
-    var key = _parseID();
-    _expect(TokenType.COLON);
-    var value = _parseString();
-    return new AST.Define(firstToken, key, value);
+    AST.Define define = new AST.Define(firstToken, id, string);
+
+    return define;
   }
 
-  // <meta1> ::= ID <meta2>
-  private AST.Meta _parseMeta1() throws CompilerException {
-    var type = _parseID();
-    return _parseMeta2(type);
+  // <meta> ::= INFO COLON STRING
+  private AST.Meta _parseMeta(ParserScope parentScope, AST.ID type) {
+    ParserScope scope = new ParserScope(TokenSet.META, parentScope);
+    eat(TokenType.INFO, scope);
+    eat(TokenType.COLON, scope);
+    var string = eat(TokenType.STRING, scope);
+    return new AST.Meta(type, type, string);
   }
 
-  // <meta2> ::= INFO COLON STRING
-  private AST.Meta _parseMeta2(AST.ID type) throws CompilerException {
-    _expect(TokenType.INFO);
-    _expect(TokenType.COLON);
-    var value = _parseString();
-    return new AST.Meta(type, type, value);
-  }
-
-  // <meta1>*
-  private List<AST.Meta> _parseMeta1List() throws CompilerException {
+  // <meta>*
+  private List<AST.Meta> _parseMetaList(ParserScope parentScope) {
     var meta = new ArrayList<AST.Meta>();
+    ParserScope scope = new ParserScope(TokenType.ID, parentScope);
     while (tok.type == TokenType.ID) {
-      meta.add(_parseMeta1());
+      var type = new AST.ID(tok);
+      _next();
+      meta.add(_parseMeta(scope, type));
     }
     return meta;
   }
 
   // <include> ::= INCLUDE STRING
-  private AST _parseInclude() throws CompilerException {
-    _expect(TokenType.INCLUDE);
-    var firstTok = tok;
-    var filename = _parseString();
-    var file = new File(filename);
+  private AST _parseInclude(ParserScope parentScope) {
+    ParserScope scope = new ParserScope(TokenType.STRING, parentScope);
+    var string = eat(TokenType.STRING, scope);
 
+    var filename = string.stringValue;
+    var file = new File(filename);
     if (!file.isAbsolute()) {
       var currentDir = currentFile.getParent();
       file = new File(String.format("%s/%s", currentDir, filename));
     }
-
     try {
       file = file.getCanonicalFile();
     } catch (IOException e) {
-      throw exception(firstTok, e.getMessage());
+      ast.diagnostics.error(string, "Syntax error, could not find specified file.");
+      return new AST();
     }
-
     if (included.contains(file)) {
+      ast.diagnostics.warn(string, "Duplicate include.");
       return new AST();
     } else {
       try {
         return Parser.parse(file, originPath, included, LOGGER.isVerbose(), LOGGER.isDebug());
       } catch (IOException e) {
-        throw exception(firstTok, e.getMessage());
+        ast.diagnostics.error(string, "Syntax error, could not find specified file.");
+        return new AST();
       }
     }
   }
 
   // <number> ::= INT | FLOAT
-  private double _parseNumber() throws CompilerException {
+  private double _parseNumber(ParserScope parentScope) {
+    ParserScope scope = new ParserScope(TokenSet.NUMBER);
+    Token token = eatEitherFromScope(scope, "a number");
     double val = 0.0;
-    switch (tok.type) {
-    case INT:
-      val = tok.intValue;
-      _next();
-      return val;
-    case FLOAT:
-      val = tok.doubleValue;
-      _next();
-      return val;
-    default:
-      throw exception(TokenType.INT, TokenType.FLOAT);
+    switch (token.type) {
+      case INT:
+        val = tok.intValue;
+        _next();
+        return val;
+      case FLOAT:
+        val = tok.doubleValue;
+        _next();
+        return val;
+      default:
+        return 0;
     }
   }
 
   // <category> ::= CATEGORY ID <meta1>* LCURLY <asset>* RCURLY
-  private AST.Category _parseCategory() throws CompilerException {
-    var firstToken = tok;
+  private AST.Category _parseCategory(ParserScope parentScope, Token firstToken) {
+    ParserScope scope = new ParserScope(TokenSet.CURLY, parentScope);
+    var name = _parseID(scope);
+    var meta = _parseMetaList(scope);
+    eat(TokenType.LCURLY, scope);
+    var assets = _parseAssetList(scope);
+    eat(TokenType.RCURLY, scope);
 
-    _expect(TokenType.CATEGORY);
-    var name = _parseID();
-    var meta = _parseMeta1List();
-    if (tok.type == TokenType.LCURLY) {
-      _next();
-    } else {
-      throw exception(TokenType.ID, TokenType.LCURLY);
-    }
-    var assets = _parseAssetList();
-    if (tok.type == TokenType.RCURLY) {
-      _next();
-    } else {
-      throw exception(assetFirst, TokenType.RCURLY);
-    }
     return new AST.Category(firstToken, name, meta, assets);
   }
 
   // <asset> ::=
   // ABSTRACT? ASSET ID (EXTENDS ID)? <meta1>* LCURLY (<attackstep> | <variable>)*
   // RCURLY
-  private AST.Asset _parseAsset() throws CompilerException {
-    var firstToken = tok;
+  private AST.Asset _parseAsset(ParserScope parentScope) {
+    ParserScope scope = new ParserScope(TokenSet.CURLY, parentScope);
 
     var isAbstract = false;
-    if (tok.type == TokenType.ABSTRACT) {
+    var modifier = Optional.ofNullable(eatOptional(TokenType.ABSTRACT));
+    if (modifier.isPresent()) {
       isAbstract = true;
-      _next();
     }
-    _expect(TokenType.ASSET);
-    var name = _parseID();
+
+    var asset = eat2(TokenType.ASSET, scope);
+    var name = _parseID(scope);
+
     Optional<AST.ID> parent = Optional.empty();
     if (tok.type == TokenType.EXTENDS) {
       _next();
-      parent = Optional.of(_parseID());
+      parent = Optional.of(_parseID(scope));
     }
-    var meta = _parseMeta1List();
-    if (tok.type == TokenType.LCURLY) {
-      _next();
-    } else {
-      throw exception(TokenType.ID, TokenType.LCURLY);
-    }
+    var meta = _parseMetaList(scope);
+
+    eat(TokenType.LCURLY, scope);
+
     var attackSteps = new ArrayList<AST.AttackStep>();
     var variables = new ArrayList<AST.Variable>();
-    loop: while (true) {
-      switch (tok.type) {
-      case LET:
-        variables.add(_parseVariable());
-        break;
-      case ALL:
-      case ANY:
-      case HASH:
-      case EXIST:
-      case NOTEXIST:
-        attackSteps.add(_parseAttackStep());
-        break;
-      case RCURLY:
-        _next();
-        break loop;
-      default:
-        throw exception(attackStepFirst, TokenType.LET, TokenType.RCURLY);
-      }
-    }
-    return new AST.Asset(firstToken, isAbstract, name, parent, meta, attackSteps, variables);
+    _parseAssetBody(parentScope, attackSteps, variables);
+
+    eat(TokenType.RCURLY, scope);
+    return new AST.Asset(asset, isAbstract, name, parent, meta, attackSteps, variables);
   }
 
-  // <asset>*
-  private List<AST.Asset> _parseAssetList() throws CompilerException {
+  private void _parseAssetBody(ParserScope parentScope, List<AST.AttackStep> attackSteps,
+      List<AST.Variable> variables) {
+    ParserScope scope = new ParserScope(TokenSet.ASSETBODY, parentScope);
+    loop: while (true) {
+      Token token = tok;
+      switch (tok.type) {
+        case LET:
+          _next();
+          variables.add(_parseVariable(scope, token));
+          break;
+        case ALL:
+        case ANY:
+        case HASH:
+        case EXIST:
+        case NOTEXIST:
+          attackSteps.add(_parseAttackStep(_parseAttackStepType(), scope));
+          break;
+        default:
+          if (scope.expects(tok.type)) {
+            break loop;
+          } else {
+            ast.diagnostics.error(tok, String.format("Syntax error on token '%s', delete this token", tok));
+            _next();
+            break;
+          }
+      }
+    }
+  }
+
+  private List<AST.Asset> _parseAssetList(ParserScope parentScope) {
+    ParserScope scope = new ParserScope(TokenSet.CATEGORYBODY, parentScope);
     var assets = new ArrayList<AST.Asset>();
     while (true) {
       switch (tok.type) {
-      case ABSTRACT:
-      case ASSET:
-        assets.add(_parseAsset());
-        break;
-      default:
-        return assets;
+        case ABSTRACT:
+        case ASSET:
+          assets.add(_parseAsset(scope));
+          break;
+        default:
+          if (scope.expects(tok.type)) {
+            return assets;
+          } else {
+            ast.diagnostics.error(tok, String.format("Syntax error on token '%s', delete this token", tok));
+            _next();
+            break;
+          }
       }
     }
   }
 
   // <attackstep> ::= <astype> ID <tag>* <cia>? <ttc>? <meta1>* <existence>?
   // <reaches>?
-  private AST.AttackStep _parseAttackStep() throws CompilerException {
+  private AST.AttackStep _parseAttackStep(AST.AttackStepType asType, ParserScope parentScope) {
     var firstToken = tok;
+    ParserScope scope = new ParserScope(TokenSet.ATTACKSTEP, parentScope);
 
-    var asType = _parseAttackStepType();
-    var name = _parseID();
+    var name = _parseID(scope);
     List<AST.ID> tags = new ArrayList<>();
     while (tok.type == TokenType.AT) {
-      tags.add(_parseTag());
+      _next();
+      tags.add(_parseTag(scope));
     }
     Optional<List<AST.CIA>> cia = Optional.empty();
     if (tok.type == TokenType.LCURLY) {
-      cia = Optional.of(_parseCIA());
+      cia = Optional.ofNullable(_parseCIA(scope));
     }
+
     Optional<AST.TTCExpr> ttc = Optional.empty();
     if (tok.type == TokenType.LBRACKET) {
-      ttc = _parseTTC();
+      ttc = _parseTTC(scope);
     }
-    var meta = _parseMeta1List();
-    Optional<AST.Requires> requires = Optional.empty();
-    if (tok.type == TokenType.REQUIRE) {
-      requires = Optional.of(_parseExistence());
-    }
-    Optional<AST.Reaches> reaches = Optional.empty();
-    if (tok.type == TokenType.INHERIT || tok.type == TokenType.OVERRIDE) {
-      reaches = Optional.of(_parseReaches());
-    }
+    var meta = _parseMetaList(scope);
+    Optional<AST.Requires> requires = Optional.ofNullable(_parseExistence(scope));
+    Optional<AST.Reaches> reaches = Optional.ofNullable(_parseReaches(scope));
     return new AST.AttackStep(firstToken, asType, name, tags, cia, ttc, meta, requires, reaches);
   }
 
   // <astype> ::= ALL | ANY | HASH | EXIST | NOTEXIST
-  private AST.AttackStepType _parseAttackStepType() throws CompilerException {
+  // TODO handle null
+  private AST.AttackStepType _parseAttackStepType() {
     switch (tok.type) {
-    case ALL:
-      _next();
-      return AST.AttackStepType.ALL;
-    case ANY:
-      _next();
-      return AST.AttackStepType.ANY;
-    case HASH:
-      _next();
-      return AST.AttackStepType.DEFENSE;
-    case EXIST:
-      _next();
-      return AST.AttackStepType.EXIST;
-    case NOTEXIST:
-      _next();
-      return AST.AttackStepType.NOTEXIST;
-    default:
-      throw exception(attackStepFirst);
+      case ALL:
+        _next();
+        return AST.AttackStepType.ALL;
+      case ANY:
+        _next();
+        return AST.AttackStepType.ANY;
+      case HASH:
+        _next();
+        return AST.AttackStepType.DEFENSE;
+      case EXIST:
+        _next();
+        return AST.AttackStepType.EXIST;
+      case NOTEXIST:
+        _next();
+        return AST.AttackStepType.NOTEXIST;
+      default:
+        return null;
     }
   }
 
   // <tag> ::= AT ID
-  private AST.ID _parseTag() throws CompilerException {
-    _expect(TokenType.AT);
-    return _parseID();
+  private AST.ID _parseTag(ParserScope parentScope) {
+    var id = _parseID(parentScope);
+    return id;
   }
 
   // <cia> ::= LCURLY <cia-list>? RCURLY
-  private List<AST.CIA> _parseCIA() throws CompilerException {
-    _expect(TokenType.LCURLY);
+  private List<AST.CIA> _parseCIA(ParserScope parentScope) {
+    eat(TokenType.LCURLY, parentScope);
     List<AST.CIA> cia = new ArrayList<AST.CIA>();
-    if (tok.type != TokenType.RCURLY) {
-      _parseCIAList(cia);
-    }
-    _expect(TokenType.RCURLY);
+    _parseCIAList(cia, parentScope);
+    eat(TokenType.RCURLY, parentScope);
     return cia;
   }
 
   // <cia-list> ::= <cia-class> (COMMA <cia-class>)*
-  private void _parseCIAList(List<AST.CIA> cia) throws CompilerException {
-    cia.add(_parseCIAClass());
+  private void _parseCIAList(List<AST.CIA> cia, ParserScope parentScope) {
+    ParserScope scope = new ParserScope(TokenType.COMMA, parentScope);
+    _parseCIAClass(cia, scope);
     while (tok.type == TokenType.COMMA) {
       _next();
-      cia.add(_parseCIAClass());
+      _parseCIAClass(cia, scope);
     }
   }
 
   // <cia-class> ::= C | I | A
-  private AST.CIA _parseCIAClass() throws CompilerException {
-    switch (tok.type) {
-    case C:
-      _next();
-      return AST.CIA.C;
-    case I:
-      _next();
-      return AST.CIA.I;
-    case A:
-      _next();
-      return AST.CIA.A;
-    default:
-      throw exception(TokenType.C, TokenType.I, TokenType.A, TokenType.RCURLY);
+  private void _parseCIAClass(List<AST.CIA> cia, ParserScope parentScope) {
+    ParserScope scope = new ParserScope(TokenSet.CIA, parentScope);
+    Token token = eatEitherFromScope(scope, "C, I or A");
+    switch (token.type) {
+      case C:
+        cia.add(AST.CIA.C);
+        _next();
+        break;
+      case I:
+        cia.add(AST.CIA.I);
+        _next();
+        break;
+      case A:
+        cia.add(AST.CIA.A);
+        _next();
+        break;
+      default:
+        break;
     }
   }
 
   // <ttc> ::= LBRACKET <ttc-expr>? RBRACKET
-  private Optional<AST.TTCExpr> _parseTTC() throws CompilerException {
-    _expect(TokenType.LBRACKET);
+  private Optional<AST.TTCExpr> _parseTTC(ParserScope parentScope) {
+    eat(TokenType.LBRACKET, parentScope);
     Optional<AST.TTCExpr> expr = Optional.empty();
     if (tok.type != TokenType.RBRACKET) {
-      expr = Optional.of(_parseTTCExpr());
+      expr = Optional.of(_parseTTCExpr(parentScope));
     } else {
       // empty brackets [] = 0
       expr = Optional.of(new AST.TTCFuncExpr(tok, new AST.ID(tok, "Zero"), new ArrayList<>()));
     }
-    _expect(TokenType.RBRACKET);
+    eat(TokenType.RBRACKET, parentScope);
     return expr;
   }
 
   // <ttc-expr> ::= <ttc-term> ((PLUS | MINUS) <ttc-term>)*
-  private AST.TTCExpr _parseTTCExpr() throws CompilerException {
+  private AST.TTCExpr _parseTTCExpr(ParserScope parentScope) {
+    ParserScope scope = new ParserScope(TokenSet.TTCEXPR, parentScope);
     var firstToken = tok;
-
-    var lhs = _parseTTCTerm();
+    var lhs = _parseTTCTerm(scope);
     while (tok.type == TokenType.PLUS || tok.type == TokenType.MINUS) {
       var addType = tok.type;
       _next();
-      var rhs = _parseTTCTerm();
+      var rhs = _parseTTCTerm(scope);
       if (addType == TokenType.PLUS) {
         lhs = new AST.TTCAddExpr(firstToken, lhs, rhs);
       } else {
@@ -449,14 +500,16 @@ public class Parser {
   }
 
   // <ttc-term> ::= <ttc-fact> ((STAR | DIVIDE) <ttc-fact>)*
-  private AST.TTCExpr _parseTTCTerm() throws CompilerException {
+  private AST.TTCExpr _parseTTCTerm(ParserScope parentScope) {
+    ParserScope scope = new ParserScope(TokenSet.TTCTERM, parentScope);
+
     var firstToken = tok;
 
-    var lhs = _parseTTCFact();
+    var lhs = _parseTTCFact(scope);
     while (tok.type == TokenType.STAR || tok.type == TokenType.DIVIDE) {
       var mulType = tok.type;
       _next();
-      var rhs = _parseTTCFact();
+      var rhs = _parseTTCFact(scope);
       if (mulType == TokenType.STAR) {
         lhs = new AST.TTCMulExpr(firstToken, lhs, rhs);
       } else {
@@ -467,105 +520,118 @@ public class Parser {
   }
 
   // <ttc-fact> ::= <ttc-prim> (POWER <ttc-fact>)?
-  private AST.TTCExpr _parseTTCFact() throws CompilerException {
+  private AST.TTCExpr _parseTTCFact(ParserScope parentScope) {
+    ParserScope scope = new ParserScope(TokenType.POWER, parentScope);
     var firstToken = tok;
 
-    var e = _parseTTCPrim();
+    var e = _parseTTCPrim(scope);
     if (tok.type == TokenType.POWER) {
       _next();
-      e = new AST.TTCPowExpr(firstToken, e, _parseTTCFact());
+      e = new AST.TTCPowExpr(firstToken, e, _parseTTCFact(scope));
     }
     return e;
   }
 
   // <ttc-prim> ::= ID (LPAREN (<number> (COMMA <number>)*)? RPAREN)?
   // | LPAREN <ttc-expr> RPAREN | <number>
-  private AST.TTCExpr _parseTTCPrim() throws CompilerException {
-    var firstToken = tok;
+  private AST.TTCExpr _parseTTCPrim(ParserScope parentScope) {
+    ParserScope scope = new ParserScope(TokenSet.TTCPRIM, parentScope);
+
+    var firstToken = eatEitherFromScope(scope, "an expression");
     if (tok.type == TokenType.ID) {
-      var function = _parseID();
+      var function = _parseID(scope);
       var params = new ArrayList<Double>();
       if (tok.type == TokenType.LPAREN) {
-        _next();
+        eat(TokenType.LPAREN, scope);
         if (tok.type == TokenType.INT || tok.type == TokenType.FLOAT) {
-          params.add(_parseNumber());
+          params.add(_parseNumber(scope));
           while (tok.type == TokenType.COMMA) {
             _next();
-            params.add(_parseNumber());
+            params.add(_parseNumber(scope));
           }
         }
-        _expect(TokenType.RPAREN);
+        eat(TokenType.RPAREN, scope);
       }
       return new AST.TTCFuncExpr(firstToken, function, params);
     } else if (tok.type == TokenType.LPAREN) {
-      _next();
-      var e = _parseTTCExpr();
-      _expect(TokenType.RPAREN);
+      eat(TokenType.LPAREN, scope);
+      var e = _parseTTCExpr(scope);
+      eat(TokenType.RPAREN, scope);
       return e;
     } else if (tok.type == TokenType.INT || tok.type == TokenType.FLOAT) {
-      double num = _parseNumber();
+      double num = _parseNumber(scope);
       return new AST.TTCNumExpr(firstToken, num);
     } else {
-      throw exception(TokenType.ID, TokenType.LPAREN, TokenType.INT, TokenType.FLOAT);
+      return new AST.TTCFuncExpr(tok, new AST.ID(tok, "Zero"), new ArrayList<>());
     }
   }
 
   // <existence> ::= REQUIRE <expr> (COMMA <expr>)*
-  private AST.Requires _parseExistence() throws CompilerException {
+  private AST.Requires _parseExistence(ParserScope parentScope) {
+    if (tok.type != TokenType.REQUIRE) {
+      return null;
+    }
     var firstToken = tok;
-
-    _expect(TokenType.REQUIRE);
+    _next();
+    ParserScope scope = new ParserScope(TokenType.COMMA, parentScope);
     var requires = new ArrayList<AST.Expr>();
-    requires.add(_parseExpr());
+    requires.add(_parseExpr(scope));
     while (tok.type == TokenType.COMMA) {
       _next();
-      requires.add(_parseExpr());
+      if (parentScope.expects(tok.type)) {
+        ast.diagnostics.error(prev, "Syntax error, remove trailing comma.");
+        break;
+      }
+      requires.add(_parseExpr(scope));
     }
     return new AST.Requires(firstToken, requires);
   }
 
   // <reaches> ::= (INHERIT | OVERRIDE) <expr> (COMMA <expr>)*
-  private AST.Reaches _parseReaches() throws CompilerException {
+  private AST.Reaches _parseReaches(ParserScope parentScope) {
     var firstToken = tok;
-
     var inherits = false;
     if (tok.type == TokenType.INHERIT) {
       inherits = true;
     } else if (tok.type == TokenType.OVERRIDE) {
       inherits = false;
     } else {
-      throw exception(TokenType.INHERIT, TokenType.OVERRIDE);
+      return null;
     }
     _next();
+    ParserScope scope = new ParserScope(TokenType.COMMA, parentScope);
     var reaches = new ArrayList<AST.Expr>();
-    reaches.add(_parseExpr());
+    reaches.add(_parseExpr(scope));
     while (tok.type == TokenType.COMMA) {
       _next();
-      reaches.add(_parseExpr());
+      if (parentScope.expects(tok.type)) {
+        ast.diagnostics.error(prev, "Syntax error, remove trailing comma.");
+        break;
+      }
+      reaches.add(_parseExpr(scope));
     }
     return new AST.Reaches(firstToken, inherits, reaches);
   }
 
   // <variable> ::= LET ID ASSIGN <expr>
-  private AST.Variable _parseVariable() throws CompilerException {
-    var firstToken = tok;
-
-    _expect(TokenType.LET);
-    var id = _parseID();
-    _expect(TokenType.ASSIGN);
-    var e = _parseExpr();
-    return new AST.Variable(firstToken, id, e);
+  private AST.Variable _parseVariable(ParserScope parentScope, Token firstToken) {
+    ParserScope scope = new ParserScope(TokenType.ASSIGN, parentScope);
+    var name = _parseID(scope);
+    eat(TokenType.ASSIGN, scope);
+    var e = _parseExpr(scope);
+    return new AST.Variable(firstToken, name, e);
   }
 
   // <expr> ::= <steps> ((UNION | INTERSECT | MINUS) <steps>)*
-  private AST.Expr _parseExpr() throws CompilerException {
+  private AST.Expr _parseExpr(ParserScope parentScope) {
+    ParserScope scope = new ParserScope(TokenSet.EXPR, parentScope);
     var firstToken = tok;
 
-    var lhs = _parseSteps();
+    var lhs = _parseSteps(scope);
     while (tok.type == TokenType.UNION || tok.type == TokenType.INTERSECT || tok.type == TokenType.MINUS) {
       var setType = tok.type;
       _next();
-      var rhs = _parseSteps();
+      var rhs = _parseSteps(scope);
       if (setType == TokenType.UNION) {
         lhs = new AST.UnionExpr(firstToken, lhs, rhs);
       } else if (setType == TokenType.INTERSECT) {
@@ -578,75 +644,80 @@ public class Parser {
   }
 
   // <steps> ::= <step> (DOT <step>)*
-  private AST.Expr _parseSteps() throws CompilerException {
+  private AST.Expr _parseSteps(ParserScope parentScope) {
+    ParserScope scope = new ParserScope(TokenType.DOT, parentScope);
     var firstToken = tok;
 
-    var lhs = _parseStep();
+    var lhs = _parseStep(scope);
     while (tok.type == TokenType.DOT) {
       _next();
-      var rhs = _parseStep();
+      var rhs = _parseStep(scope);
       lhs = new AST.StepExpr(firstToken, lhs, rhs);
     }
     return lhs;
   }
 
   // <step> ::= (LPAREN <expr> RPAREN | ID (LPAREN RPAREN)?) (STAR | <type>)*
-  private AST.Expr _parseStep() throws CompilerException {
-    var firstToken = tok;
-
+  private AST.Expr _parseStep(ParserScope parentScope) {
+    ParserScope scope = new ParserScope(TokenSet.STEP, parentScope);
+    Token firstToken = tok;
     AST.Expr e = null;
     if (tok.type == TokenType.LPAREN) {
-      _next();
-      e = _parseExpr();
-      _expect(TokenType.RPAREN);
-    } else if (tok.type == TokenType.ID) {
-      var id = _parseID();
-      e = new AST.IDExpr(firstToken, id);
-      if (tok.type == TokenType.LPAREN) {
-        _next();
-        _expect(TokenType.RPAREN);
-        e = new AST.CallExpr(firstToken, id);
-      }
+      eat(TokenType.LPAREN, scope);
+      e = _parseExpr(scope);
+      eat(TokenType.RPAREN, scope);
     } else {
-      throw exception(TokenType.LPAREN, TokenType.ID);
+      var id = _parseID(scope);
+      e = _parseCallExpr(id, scope);
     }
     while (tok.type == TokenType.STAR || tok.type == TokenType.LBRACKET) {
       if (tok.type == TokenType.STAR) {
         _next();
         e = new AST.TransitiveExpr(firstToken, e);
       } else if (tok.type == TokenType.LBRACKET) {
-        e = new AST.SubTypeExpr(firstToken, e, _parseType());
+        e = new AST.SubTypeExpr(firstToken, e, _parseType(scope));
       }
     }
     return e;
   }
 
-  // <associations> ::= ASSOCIATIONS LCURLY <associations1>? RCURLY
-  private List<AST.Association> _parseAssociations() throws CompilerException {
-    _expect(TokenType.ASSOCIATIONS);
-    _expect(TokenType.LCURLY);
-    List<AST.Association> assocs = new ArrayList<>();
-    if (tok.type == TokenType.ID) {
-      assocs = _parseAssociations1();
+  // ::= ID (LPAREN RPAREN)?)
+  private AST.Expr _parseCallExpr(AST.ID id, ParserScope parentScope) {
+    AST.Expr e = null;
+
+    if (tok.type == TokenType.LPAREN) {
+      eat(TokenType.LPAREN, parentScope);
+      eat(TokenType.RPAREN, parentScope);
+      e = new AST.CallExpr(id, id);
+    } else {
+      e = new AST.IDExpr(id, id);
     }
-    _expect(TokenType.RCURLY);
+    return e;
+  }
+
+  // <associations> ::= ASSOCIATIONS LCURLY <associations1>? RCURLY
+  private List<AST.Association> _parseAssociations(ParserScope parentScope) {
+    ParserScope scope = new ParserScope(TokenSet.BLOCK, parentScope);
+    eat(TokenType.LCURLY, scope);
+    List<AST.Association> assocs = new ArrayList<>();
+    assocs = _parseAssociations1(scope);
+    eat(TokenType.RCURLY, scope);
     return assocs;
   }
 
   // <associations1> ::= ID <association> (ID (<meta2> | <association>))*
-  private List<AST.Association> _parseAssociations1() throws CompilerException {
+  private List<AST.Association> _parseAssociations1(ParserScope parentScope) {
     var assocs = new ArrayList<AST.Association>();
-    var leftAsset = _parseID();
-    var assoc = _parseAssociation(leftAsset);
+    var leftAsset = _parseID(parentScope);
+    var assoc = _parseAssociation(parentScope, leftAsset);
+
     while (tok.type == TokenType.ID) {
-      var id = _parseID();
+      var id = _parseID(parentScope);
       if (tok.type == TokenType.INFO) {
-        assoc.meta.add(_parseMeta2(id));
-      } else if (tok.type == TokenType.LBRACKET) {
-        assocs.add(assoc);
-        assoc = _parseAssociation(id);
+        assoc.meta.add(_parseMeta(parentScope, id));
       } else {
-        throw exception(TokenType.INFO, TokenType.LBRACKET);
+        assocs.add(assoc);
+        assoc = _parseAssociation(parentScope, id);
       }
     }
     assocs.add(assoc);
@@ -654,27 +725,26 @@ public class Parser {
   }
 
   // <association> ::= <type> <mult> LARROW ID RARROW <mult> <type> ID
-  private AST.Association _parseAssociation(AST.ID leftAsset) throws CompilerException {
-    var leftField = _parseType();
-    var leftMult = _parseMultiplicity();
-    _expect(TokenType.LARROW);
-    var linkName = _parseID();
-    _expect(TokenType.RARROW);
-    var rightMult = _parseMultiplicity();
-    var rightField = _parseType();
-    var rightAsset = _parseID();
-    return new AST.Association(leftAsset, leftAsset, leftField, leftMult, linkName, rightMult, rightField, rightAsset,
-        new ArrayList<>());
+  private AST.Association _parseAssociation(ParserScope parentScope, AST.ID leftAsset) {
+    ParserScope scope = new ParserScope(TokenSet.ASSOCIATION, parentScope);
+    var leftField = _parseType(scope);
+    var leftMult = _parseMultiplicity(scope);
+    eat(TokenType.LARROW, scope);
+    var linkName = _parseID(scope);
+    eat(TokenType.RARROW, scope);
+    var rightMult = _parseMultiplicity(scope);
+    var rightField = _parseType(scope);
+    var rightAsset = _parseID(scope);
+    return new AST.Association(leftAsset.getLocation(), leftAsset, leftField, leftMult, linkName, rightMult, rightField,
+        rightAsset, new ArrayList<>());
   }
 
   // <mult> ::= <mult-unit> (RANGE <mult-unit>)?
-  private AST.Multiplicity _parseMultiplicity() throws CompilerException {
-    var firstTok = tok;
-
-    var min = _parseMultiplicityUnit();
+  private AST.Multiplicity _parseMultiplicity(ParserScope parentScope) {
+    var min = _parseMultiplicityUnit(parentScope);
     if (tok.type == TokenType.RANGE) {
       _next();
-      var max = _parseMultiplicityUnit();
+      var max = _parseMultiplicityUnit(parentScope);
       if (min == 0 && max == 1) {
         return AST.Multiplicity.ZERO_OR_ONE;
       } else if (min == 0 && max == 2) {
@@ -684,11 +754,11 @@ public class Parser {
       } else if (min == 1 && max == 2) {
         return AST.Multiplicity.ONE_OR_MORE;
       } else {
-        throw exception(firstTok, String.format("Invalid multiplicity '%c..%c'", intToMult(min), intToMult(max)));
+        return AST.Multiplicity.INVALID;
       }
     } else {
       if (min == 0) {
-        throw exception(firstTok, "Invalid multiplicity '0'");
+        return AST.Multiplicity.INVALID;
       } else if (min == 1) {
         return AST.Multiplicity.ONE;
       } else {
@@ -699,85 +769,41 @@ public class Parser {
 
   private static char intToMult(int n) {
     switch (n) {
-    case 0:
-      return '0';
-    case 1:
-      return '1';
-    default:
-      return '*';
+      case 0:
+        return '0';
+      case 1:
+        return '1';
+      default:
+        return '*';
     }
   }
 
   // <mult-unit> ::= INT | STAR
   // 0 | 1 | *
-  private int _parseMultiplicityUnit() throws CompilerException {
-    if (tok.type == TokenType.INT) {
-      var n = tok.intValue;
+  private int _parseMultiplicityUnit(ParserScope parentScope) {
+    ParserScope scope = new ParserScope(TokenSet.MULTIPLICITY, parentScope);
+    var token = eatEitherFromScope(scope, "a mulitplicity expression");
+    if (token.type == TokenType.INT) {
+      var n = token.intValue;
       if (n == 0 || n == 1) {
         _next();
         return n;
+      } else {
+        return 3;
       }
-    } else if (tok.type == TokenType.STAR) {
+    } else if (token.type == TokenType.STAR) {
       _next();
       return 2;
     }
-    throw expectedException("'0', '1', or '*'");
+    return 3;
   }
 
   // <type> ::= LBRACKET ID RBRACKET
-  private AST.ID _parseType() throws CompilerException {
-    _expect(TokenType.LBRACKET);
-    var id = _parseID();
-    _expect(TokenType.RBRACKET);
+  private AST.ID _parseType(ParserScope parentScope) {
+    eat(TokenType.LBRACKET, parentScope);
+    var id = _parseID(parentScope);
+    eat(TokenType.RBRACKET, parentScope);
     return id;
   }
 
-  /*
-   * CompilerException helper functions
-   */
-
-  private CompilerException expectedException(String expected) {
-    return exception(String.format("expected %s, found %s", expected, tok.type.toString()));
-  }
-
-  private CompilerException exception(String msg) {
-    return exception(tok, msg);
-  }
-
-  private CompilerException exception(Location location, String msg) {
-    return new CompilerException("There were syntax errors");
-  }
-
-  private CompilerException exception(TokenType... types) {
-    return exception(new TokenType[0], types);
-  }
-
-  private CompilerException exception(TokenType[] firstTypes, TokenType... followingTypes) {
-    if (firstTypes.length == 0 && followingTypes.length == 0) {
-      return expectedException("(null)");
-    } else {
-      var sb = new StringBuilder();
-      var totalLength = firstTypes.length + followingTypes.length;
-      for (int i = 0; i < totalLength; ++i) {
-        TokenType type = null;
-        if (i < firstTypes.length) {
-          type = firstTypes[i];
-        } else {
-          type = followingTypes[i - firstTypes.length];
-        }
-        if (i == 0) {
-          sb.append(type.toString());
-        } else if (i == totalLength - 1) {
-          if (totalLength == 2) {
-            sb.append(String.format(" or %s", type.toString()));
-          } else {
-            sb.append(String.format(", or %s", type.toString()));
-          }
-        } else {
-          sb.append(String.format(", %s", type.toString()));
-        }
-      }
-      return expectedException(sb.toString());
-    }
-  }
 }
