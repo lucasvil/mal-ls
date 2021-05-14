@@ -17,7 +17,7 @@ package org.mal.ls.compiler.lib;
 
 import java.util.List;
 
-public class Token extends Location {
+public class Token extends MalLocation {
   public final TokenType type;
   public final String stringValue;
   public final double doubleValue;
@@ -26,7 +26,7 @@ public class Token extends Location {
   public final List<Token> postComments;
   public final List<TokenError> errors;
 
-  public Token(TokenType type, Location location) {
+  public Token(TokenType type, MalLocation location) {
     super(location);
     this.type = type;
     this.stringValue = "";
@@ -37,7 +37,7 @@ public class Token extends Location {
     this.errors = List.of();
   }
 
-  public Token(TokenType type, Location location, List<TokenError> errors) {
+  public Token(TokenType type, MalLocation location, List<TokenError> errors) {
     super(location);
     this.type = type;
     this.stringValue = "";
@@ -48,7 +48,7 @@ public class Token extends Location {
     this.errors = errors;
   }
 
-  public Token(TokenType type, Location location, String stringValue) {
+  public Token(TokenType type, MalLocation location, String stringValue) {
     super(location);
     this.type = type;
     this.stringValue = stringValue;
@@ -59,7 +59,7 @@ public class Token extends Location {
     this.errors = List.of();
   }
 
-  public Token(TokenType type, Location location, String stringValue, List<TokenError> errors) {
+  public Token(TokenType type, MalLocation location, String stringValue, List<TokenError> errors) {
     super(location);
     this.type = type;
     this.stringValue = stringValue;
@@ -71,7 +71,7 @@ public class Token extends Location {
   }
 
   public Token(Token tok, List<Token> preComments, List<Token> postComments) {
-    super(tok.filename, tok.start, tok.end);
+    super(tok);
     type = tok.type;
     stringValue = tok.stringValue;
     doubleValue = tok.doubleValue;
@@ -81,7 +81,7 @@ public class Token extends Location {
     this.errors = tok.errors;
   }
 
-  public Token(TokenType type, Location location, double doubleValue) {
+  public Token(TokenType type, MalLocation location, double doubleValue) {
     super(location);
     this.type = type;
     this.stringValue = "";
@@ -92,7 +92,7 @@ public class Token extends Location {
     this.errors = List.of();
   }
 
-  public Token(TokenType type, Location location, int intValue) {
+  public Token(TokenType type, MalLocation location, int intValue) {
     super(location);
     this.type = type;
     this.stringValue = "";

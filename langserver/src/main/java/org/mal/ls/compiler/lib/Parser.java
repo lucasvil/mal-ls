@@ -17,6 +17,8 @@ package org.mal.ls.compiler.lib;
 
 import java.io.File;
 import java.io.IOException;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -26,7 +28,6 @@ import java.util.Optional;
 import java.util.Set;
 
 public class Parser {
-  private MalLogger LOGGER;
   private AST ast;
   private Lexer lex;
   private Token tok;
@@ -35,9 +36,8 @@ public class Parser {
   private File currentFile;
   private Path originPath;
 
-  private Parser(File file, boolean verbose, boolean debug) throws IOException {
+  private Parser(File file) throws IOException {
     Locale.setDefault(Locale.ROOT);
-    LOGGER = new MalLogger("PARSER", verbose, debug);
     var canonicalFile = file.getCanonicalFile();
     this.lex = new Lexer(canonicalFile);
     this.included = new HashSet<File>();
@@ -46,9 +46,8 @@ public class Parser {
     this.originPath = Path.of(canonicalFile.getParent());
   }
 
-  private Parser(File file, Path originPath, Set<File> included, boolean verbose, boolean debug) throws IOException {
+  private Parser(File file, Path originPath, Set<File> included) throws IOException {
     Locale.setDefault(Locale.ROOT);
-    LOGGER = new MalLogger("PARSER", verbose, debug);
     this.lex = new Lexer(file, originPath.relativize(Path.of(file.getPath())).toString());
     this.included = included;
     this.included.add(file);
@@ -56,17 +55,16 @@ public class Parser {
     this.originPath = originPath;
   }
 
+  public static AST parse(String uri) throws IOException, URISyntaxException {
+    return parse(new File(new URI(uri)));
+  }
+
   public static AST parse(File file) throws IOException {
-    return parse(file, false, false);
+    return new Parser(file)._parse();
   }
 
-  public static AST parse(File file, boolean verbose, boolean debug) throws IOException {
-    return new Parser(file, verbose, debug)._parse();
-  }
-
-  private static AST parse(File file, Path originPath, Set<File> included, boolean verbose, boolean debug)
-      throws IOException {
-    return new Parser(file, originPath, included, verbose, debug)._parse();
+  private static AST parse(File file, Path originPath, Set<File> included) throws IOException {
+    return new Parser(file, originPath, included)._parse();
   }
 
   private void _next() {
@@ -106,7 +104,8 @@ public class Parser {
           }
         }
         sb.append("delete these tokens.");
-        ast.diagnostics.error(new Location(tok.filename, skipped.get(0).start, skipped.get(skipped.size() - 1).end),
+        ast.diagnostics.error(
+            new MalLocation(tok.getUri(), skipped.get(0).getStart(), skipped.get(skipped.size() - 1).getEnd()),
             sb.toString());
       } else {
         ast.diagnostics.error(skipped.get(0),
@@ -248,7 +247,7 @@ public class Parser {
       return new AST();
     } else {
       try {
-        return Parser.parse(file, originPath, included, LOGGER.isVerbose(), LOGGER.isDebug());
+        return Parser.parse(file, originPath, included);
       } catch (IOException e) {
         ast.diagnostics.error(string, "Syntax error, could not find specified file.");
         return new AST();

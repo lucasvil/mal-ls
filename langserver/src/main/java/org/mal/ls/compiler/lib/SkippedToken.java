@@ -1,7 +1,7 @@
 package org.mal.ls.compiler.lib;
 
 public class SkippedToken extends Token {
-  public SkippedToken(TokenType type, Location location) {
+  public SkippedToken(TokenType type, MalLocation location) {
     super(type, location);
   }
 
