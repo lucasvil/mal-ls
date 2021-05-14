@@ -47,7 +47,6 @@ public class Analyzer {
   }
 
   public static List<Diagnostic> analyze(AST ast) throws CompilerException {
-    System.err.println(ast);
     analyze(ast, false, false);
     return ast.diagnostics.getDiagnostics();
   }
