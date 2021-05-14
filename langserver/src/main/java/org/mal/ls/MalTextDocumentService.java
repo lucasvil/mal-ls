@@ -119,14 +119,12 @@ public class MalTextDocumentService implements TextDocumentService {
       String variable = this.defHandler.getVariable(params.getPosition(), this.ast);
       System.err.println(variable);
       if (!variable.equals("")) {
-        Range range = this.defHandler.getDefinitionRange();
-        String uri = this.defHandler.getDefinitionUri(context.get(DocumentContextKeys.URI_KEY));
-        Location location = new Location();
-        location.setUri(uri);
-        location.setRange(range);
-        locationList.add(location);
-      } else {
-        System.err.println("variable not found");
+        locationList.addAll(this.defHandler.getDefinitionLocations(context.get(DocumentContextKeys.URI_KEY)));
+        //String uri = this.defHandler.getDefinitionUri(context.get(DocumentContextKeys.URI_KEY));
+        //Location location = new Location();
+        //location.setUri(uri);
+        //location.setRange(range);
+        //locationList.add(location);
       }
       return Either.forLeft(locationList);
     });
