@@ -74,10 +74,10 @@ public class AST {
     return sb.toString();
   }
 
-  public static class ID extends Location {
+  public static class ID extends MalLocation {
     public final String id;
 
-    public ID(Location location, String id) {
+    public ID(MalLocation location, String id) {
       super(location);
       this.id = id;
     }
@@ -97,12 +97,12 @@ public class AST {
     }
   }
 
-  public static class Define extends Location {
+  public static class Define extends MalLocation {
     public final ID key;
     public final String value;
 
-    public Define(Location firstLocation, ID key, Token string) {
-      super(new Location(firstLocation.filename, firstLocation.start, string.end));
+    public Define(MalLocation firstLocation, ID key, Token string) {
+      super(new MalLocation(firstLocation.getUri(), firstLocation.getStart(), string.getEnd()));
       this.key = key;
       this.value = string.stringValue;
     }
@@ -137,12 +137,12 @@ public class AST {
     }
   }
 
-  public static class Meta extends Location {
+  public static class Meta extends MalLocation {
     public final ID type;
     public final String string;
 
-    public Meta(Location firstLocation, ID type, Token string) {
-      super(new Location(firstLocation.filename, firstLocation.start, string.end));
+    public Meta(MalLocation firstLocation, ID type, Token string) {
+      super(new MalLocation(firstLocation.getUri(), firstLocation.getStart(), string.getEnd()));
       this.type = type;
       this.string = string.stringValue;
     }
@@ -177,12 +177,12 @@ public class AST {
 
   }
 
-  public static class Category extends Location {
+  public static class Category extends MalLocation {
     public final ID name;
     public final List<Meta> meta;
     public final List<Asset> assets;
 
-    public Category(Location location, ID name, List<Meta> meta, List<Asset> assets) {
+    public Category(MalLocation location, ID name, List<Meta> meta, List<Asset> assets) {
       super(location);
       this.name = name;
       this.meta = meta;
@@ -223,7 +223,7 @@ public class AST {
 
   }
 
-  public static class Asset extends Location {
+  public static class Asset extends MalLocation {
     public final boolean isAbstract;
     public final ID name;
     public final Optional<ID> parent;
@@ -231,7 +231,7 @@ public class AST {
     public final List<AttackStep> attackSteps;
     public final List<Variable> variables;
 
-    public Asset(Location pos, boolean isAbstract, ID name, Optional<ID> parent, List<Meta> meta,
+    public Asset(MalLocation pos, boolean isAbstract, ID name, Optional<ID> parent, List<Meta> meta,
         List<AttackStep> attackSteps, List<Variable> variables) {
       super(pos);
       this.isAbstract = isAbstract;
@@ -279,7 +279,7 @@ public class AST {
     ALL, ANY, DEFENSE, EXIST, NOTEXIST
   }
 
-  public static class AttackStep extends Location {
+  public static class AttackStep extends MalLocation {
     public final AttackStepType type;
     public final ID name;
     public final List<ID> tags;
@@ -289,7 +289,7 @@ public class AST {
     public final Optional<Requires> requires;
     public final Optional<Reaches> reaches;
 
-    public AttackStep(Location location, AttackStepType type, ID name, List<ID> tags, Optional<List<CIA>> cia,
+    public AttackStep(MalLocation location, AttackStepType type, ID name, List<ID> tags, Optional<List<CIA>> cia,
         Optional<TTCExpr> ttc, List<Meta> meta, Optional<Requires> requires, Optional<Reaches> reaches) {
       super(location);
       this.type = type;
@@ -370,8 +370,8 @@ public class AST {
     }
   }
 
-  public abstract static class TTCExpr extends Location {
-    public TTCExpr(Location location) {
+  public abstract static class TTCExpr extends MalLocation {
+    public TTCExpr(MalLocation location) {
       super(location);
     }
   }
@@ -380,7 +380,7 @@ public class AST {
     public final TTCExpr lhs;
     public final TTCExpr rhs;
 
-    public TTCBinaryExpr(Location location, TTCExpr lhs, TTCExpr rhs) {
+    public TTCBinaryExpr(MalLocation location, TTCExpr lhs, TTCExpr rhs) {
       super(location);
       this.lhs = lhs;
       this.rhs = rhs;
@@ -388,7 +388,7 @@ public class AST {
   }
 
   public static class TTCAddExpr extends TTCBinaryExpr {
-    public TTCAddExpr(Location location, TTCExpr lhs, TTCExpr rhs) {
+    public TTCAddExpr(MalLocation location, TTCExpr lhs, TTCExpr rhs) {
       super(location, lhs, rhs);
     }
 
@@ -399,7 +399,7 @@ public class AST {
   }
 
   public static class TTCSubExpr extends TTCBinaryExpr {
-    public TTCSubExpr(Location location, TTCExpr lhs, TTCExpr rhs) {
+    public TTCSubExpr(MalLocation location, TTCExpr lhs, TTCExpr rhs) {
       super(location, lhs, rhs);
     }
 
@@ -410,7 +410,7 @@ public class AST {
   }
 
   public static class TTCMulExpr extends TTCBinaryExpr {
-    public TTCMulExpr(Location location, TTCExpr lhs, TTCExpr rhs) {
+    public TTCMulExpr(MalLocation location, TTCExpr lhs, TTCExpr rhs) {
       super(location, lhs, rhs);
     }
 
@@ -421,7 +421,7 @@ public class AST {
   }
 
   public static class TTCDivExpr extends TTCBinaryExpr {
-    public TTCDivExpr(Location location, TTCExpr lhs, TTCExpr rhs) {
+    public TTCDivExpr(MalLocation location, TTCExpr lhs, TTCExpr rhs) {
       super(location, lhs, rhs);
     }
 
@@ -432,7 +432,7 @@ public class AST {
   }
 
   public static class TTCPowExpr extends TTCBinaryExpr {
-    public TTCPowExpr(Location location, TTCExpr lhs, TTCExpr rhs) {
+    public TTCPowExpr(MalLocation location, TTCExpr lhs, TTCExpr rhs) {
       super(location, lhs, rhs);
     }
 
@@ -446,7 +446,7 @@ public class AST {
     public final ID name;
     public final List<Double> params;
 
-    public TTCFuncExpr(Location location, ID name, List<Double> params) {
+    public TTCFuncExpr(MalLocation location, ID name, List<Double> params) {
       super(location);
       this.name = name;
       this.params = params;
@@ -467,7 +467,7 @@ public class AST {
   public static class TTCNumExpr extends TTCExpr {
     public final double value;
 
-    public TTCNumExpr(Location location, double value) {
+    public TTCNumExpr(MalLocation location, double value) {
       super(location);
       this.value = value;
     }
@@ -478,10 +478,10 @@ public class AST {
     }
   }
 
-  public static class Requires extends Location {
+  public static class Requires extends MalLocation {
     public final List<Expr> requires;
 
-    public Requires(Location location, List<Expr> requires) {
+    public Requires(MalLocation location, List<Expr> requires) {
       super(location);
       this.requires = requires;
     }
@@ -496,11 +496,11 @@ public class AST {
     }
   }
 
-  public static class Reaches extends Location {
+  public static class Reaches extends MalLocation {
     public final boolean inherits;
     public final List<Expr> reaches;
 
-    public Reaches(Location location, boolean inherits, List<Expr> reaches) {
+    public Reaches(MalLocation location, boolean inherits, List<Expr> reaches) {
       super(location);
       this.inherits = inherits;
       this.reaches = reaches;
@@ -516,11 +516,11 @@ public class AST {
     }
   }
 
-  public static class Variable extends Location {
+  public static class Variable extends MalLocation {
     public final ID name;
     public final Expr expr;
 
-    public Variable(Location location, ID name, Expr expr) {
+    public Variable(MalLocation location, ID name, Expr expr) {
       super(location);
       this.name = name;
       this.expr = expr;
@@ -551,8 +551,8 @@ public class AST {
     }
   }
 
-  public abstract static class Expr extends Location {
-    public Expr(Location location) {
+  public abstract static class Expr extends MalLocation {
+    public Expr(MalLocation location) {
       super(location);
     }
 
@@ -576,7 +576,7 @@ public class AST {
     public Expr lhs;
     public Expr rhs;
 
-    public BinaryExpr(Location location, Expr lhs, Expr rhs) {
+    public BinaryExpr(MalLocation location, Expr lhs, Expr rhs) {
       super(location);
       this.lhs = lhs;
       this.rhs = rhs;
@@ -584,7 +584,7 @@ public class AST {
   }
 
   public static class UnionExpr extends BinaryExpr {
-    public UnionExpr(Location location, Expr lhs, Expr rhs) {
+    public UnionExpr(MalLocation location, Expr lhs, Expr rhs) {
       super(location, lhs, rhs);
     }
 
@@ -595,7 +595,7 @@ public class AST {
   }
 
   public static class DifferenceExpr extends BinaryExpr {
-    public DifferenceExpr(Location location, Expr lhs, Expr rhs) {
+    public DifferenceExpr(MalLocation location, Expr lhs, Expr rhs) {
       super(location, lhs, rhs);
     }
 
@@ -606,7 +606,7 @@ public class AST {
   }
 
   public static class IntersectionExpr extends BinaryExpr {
-    public IntersectionExpr(Location location, Expr lhs, Expr rhs) {
+    public IntersectionExpr(MalLocation location, Expr lhs, Expr rhs) {
       super(location, lhs, rhs);
     }
 
@@ -617,7 +617,7 @@ public class AST {
   }
 
   public static class StepExpr extends BinaryExpr {
-    public StepExpr(Location location, Expr lhs, Expr rhs) {
+    public StepExpr(MalLocation location, Expr lhs, Expr rhs) {
       super(location, lhs, rhs);
     }
 
@@ -630,7 +630,7 @@ public class AST {
   public abstract static class UnaryExpr extends Expr {
     public final Expr e;
 
-    public UnaryExpr(Location location, Expr e) {
+    public UnaryExpr(MalLocation location, Expr e) {
       super(location);
       this.e = e;
     }
@@ -640,7 +640,7 @@ public class AST {
     public final Token lparen;
     public final Token rparen;
 
-    public ParenExpr(Location location, Expr e, Token lparen, Token rparen) {
+    public ParenExpr(MalLocation location, Expr e, Token lparen, Token rparen) {
       super(location, e);
       this.lparen = lparen;
       this.rparen = rparen;
@@ -653,7 +653,7 @@ public class AST {
   }
 
   public static class TransitiveExpr extends UnaryExpr {
-    public TransitiveExpr(Location location, Expr e) {
+    public TransitiveExpr(MalLocation location, Expr e) {
       super(location, e);
     }
 
@@ -666,7 +666,7 @@ public class AST {
   public static class SubTypeExpr extends UnaryExpr {
     public final ID subType;
 
-    public SubTypeExpr(Location location, Expr e, ID subType) {
+    public SubTypeExpr(MalLocation location, Expr e, ID subType) {
       super(location, e);
       this.subType = subType;
     }
@@ -680,7 +680,7 @@ public class AST {
   public static class IDExpr extends Expr {
     public final ID id;
 
-    public IDExpr(Location location, ID id) {
+    public IDExpr(MalLocation location, ID id) {
       super(location);
       this.id = id;
     }
@@ -694,7 +694,7 @@ public class AST {
   public static class CallExpr extends Expr {
     public final ID id;
 
-    public CallExpr(Location location, ID id) {
+    public CallExpr(MalLocation location, ID id) {
       super(location);
       this.id = id;
     }
@@ -705,7 +705,7 @@ public class AST {
     }
   }
 
-  public static class Association extends Location {
+  public static class Association extends MalLocation {
     public final ID leftAsset;
     public final ID leftField;
     public final Multiplicity leftMult;
@@ -715,7 +715,7 @@ public class AST {
     public final ID rightAsset;
     public final List<Meta> meta;
 
-    public Association(Location location, ID leftAsset, ID leftField, Multiplicity leftMult, ID linkName,
+    public Association(MalLocation location, ID leftAsset, ID leftField, Multiplicity leftMult, ID linkName,
         Multiplicity rightMult, ID rightField, ID rightAsset, List<Meta> meta) {
       super(location);
       this.leftAsset = leftAsset;

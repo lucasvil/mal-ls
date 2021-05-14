@@ -15,9 +15,7 @@ import org.mal.ls.context.DocumentContextKeys;
 public class DiagnosticService {
   public static PublishDiagnosticsParams getDiagnosticsParams(DocumentContext context) {
     try {
-      File file = new File(new URI(context.get(DocumentContextKeys.URI_KEY)));
-
-      List<Diagnostic> diagnostics = Analyzer.analyze(Parser.parse(file));
+      List<Diagnostic> diagnostics = Analyzer.analyze(Parser.parse(context.get(DocumentContextKeys.URI_KEY)));
 
       return new PublishDiagnosticsParams(context.get(DocumentContextKeys.URI_KEY), diagnostics);
     } catch (Exception e) {
