@@ -13,10 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-/*
-* 
-*/
 package org.mal.ls.compiler.lib;
 
 import java.util.ArrayList;
@@ -31,8 +27,9 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 
+import org.eclipse.lsp4j.Diagnostic;
+
 public class Analyzer {
-  private MalLogger LOGGER;
   private Map<String, AST.Asset> assets = new LinkedHashMap<>();
   private Map<String, Scope<AST.Variable>> assetVariables = new LinkedHashMap<>();
   private Map<String, Scope<AST.Association>> fields = new LinkedHashMap<>();
@@ -46,45 +43,52 @@ public class Analyzer {
 
   private Analyzer(AST ast, boolean verbose, boolean debug) {
     Locale.setDefault(Locale.ROOT);
-    LOGGER = new MalLogger("ANALYZER", verbose, debug);
     this.ast = ast;
   }
 
-  public static void analyze(AST ast) {
+  public static List<Diagnostic> analyze(AST ast) throws CompilerException {
     analyze(ast, false, false);
+    return ast.diagnostics.getDiagnostics();
   }
 
-  public static void analyze(AST ast, boolean verbose, boolean debug) {
+  public static void analyze(AST ast, boolean verbose, boolean debug) throws CompilerException {
     new Analyzer(ast, verbose, debug).analyzeLog();
   }
 
-  private void analyzeLog() {
-    _analyze();
-    LOGGER.print();
+  private void analyzeLog() throws CompilerException {
+    try {
+      _analyze();
+    } catch (CompilerException e) {
+      throw e;
+    }
   }
 
-  private void _analyze() {
+  private void _analyze() throws CompilerException {
     collectAssociations();
 
     checkDefines();
     checkCategories();
     checkAssets();
     checkMetas();
-    // checkExtends(); // might throw
+    checkExtends(); // might throw
 
     checkAbstract();
-    // checkParents(); // might throw
+    checkParents(); // might throw
 
     checkSteps();
     checkCIA();
     checkTTC();
     checkFields();
-    checkVariables();
+    // checkVariables();
     // checkReaches(); // might throw
 
     // checkAssociations(); // might throw
 
-    checkUnused();
+    // checkUnused();
+
+    // if (failed) {
+    // throw exception();
+    // }
   }
 
   private void collectAssociations() {
@@ -161,7 +165,7 @@ public class Analyzer {
     for (AST.Define define : ast.getDefines()) {
       AST.Define prevDef = defines.put(define.key.id, define);
       if (prevDef != null) {
-        error(define, String.format("Define '%s' previously defined at %s", define.key.id, prevDef.locationString()));
+        error(define, String.format("Define '%s' previously defined at %s", define.key.id, prevDef.start.posString()));
       }
     }
     AST.Define id = defines.get("id");
@@ -170,6 +174,7 @@ public class Analyzer {
         error(id, "Define 'id' cannot be empty");
       }
     } else {
+      // TODO where does this type of error go?
       error("Missing required define '#id: \"\"'");
     }
     AST.Define version = defines.get("version");
@@ -179,6 +184,7 @@ public class Analyzer {
             "Define 'version' must be valid semantic versioning without pre-release identifier and build metadata");
       }
     } else {
+      // TODO where does this type of error go?
       error("Missing required define '#version: \"\"'");
     }
   }
@@ -186,8 +192,7 @@ public class Analyzer {
   private void checkCategories() {
     for (AST.Category category : ast.getCategories()) {
       if (category.assets.isEmpty() && category.meta.isEmpty()) {
-        // LOGGER.warning(category.name, String.format("Category '%s' contains no assets
-        // or metadata", category.name.id));
+        warning(category.name, String.format("Category '%s' contains no assets or metadata.", category.name.id));
       }
     }
   }
@@ -227,18 +232,18 @@ public class Analyzer {
         metas.put(meta.type.id, meta);
       } else {
         var prevDef = metas.get(meta.type.id);
-        error(meta, String.format("Metadata %s previously defined at %s", meta.type.id, prevDef.locationString()));
+        error(meta, String.format("Metadata %s previously defined at %s", meta.type.id, prevDef.start.posString()));
       }
     }
   }
 
   private void checkAssets() {
     for (AST.Category category : ast.getCategories()) {
-      for (AST.Asset asset : category.assets) {
+      for (AST.Asset asset : category.getAssets()) {
         if (assets.containsKey(asset.name.id)) {
           AST.Asset prevDef = assets.get(asset.name.id);
           error(asset.name,
-              String.format("Asset '%s' previously defined at %s", asset.name.id, prevDef.name.locationString()));
+              String.format("Asset '%s' previously defined at %s", asset.name.id, prevDef.name.start.posString()));
         } else {
           assets.put(asset.name.id, asset);
         }
@@ -246,22 +251,15 @@ public class Analyzer {
     }
   }
 
-  private void checkExtends() throws CompilerException {
-    boolean err = false;
+  private void checkExtends() {
     for (AST.Asset asset : assets.values()) {
       if (asset.parent.isPresent()) {
-        if (getAsset(asset.parent.get()) == null) {
-          err = true;
-        }
+        getAsset(asset.parent.get());
       }
-    }
-    if (err) {
-      throw exception();
     }
   }
 
-  private void checkParents() throws CompilerException {
-    boolean err = false;
+  private void checkParents() {
     for (AST.Asset asset : assets.values()) {
       if (asset.parent.isPresent()) {
         Set<String> parents = new LinkedHashSet<>();
@@ -275,15 +273,14 @@ public class Analyzer {
             }
             sb.append(parent.name.id);
             error(asset.name, String.format("Asset '%s' extends in loop '%s'", asset.name.id, sb.toString()));
-            err = true;
             break;
           }
           parent = getAsset(parent.parent.get());
+          if (parent == null) {
+            break;
+          }
         } while (parent.parent.isPresent());
       }
-    }
-    if (err) {
-      throw exception();
     }
   }
 
@@ -298,8 +295,7 @@ public class Analyzer {
           }
         }
         if (!found) {
-          // LOGGER.warning(parent.name, String.format("Asset '%s' is abstract but never
-          // extended to", parent.name.id));
+          warning(parent.name, String.format("Asset '%s' is abstract but never extended to.", parent.name.id));
         }
       }
     }
@@ -324,9 +320,8 @@ public class Analyzer {
           var cias = new HashSet<AST.CIA>();
           for (var cia : attackStep.cia.get()) {
             if (cias.contains(cia)) {
-              // LOGGER.warning(attackStep.name, String.format("Attack step %s.%s contains
-              // duplicate classification {%s}",
-              // asset.name.id, attackStep.name.id, cia));
+              warning(attackStep.name, String.format("Attack step %s.%s contains duplicate classification {%s}",
+                  asset.name.id, attackStep.name.id, cia));
             } else {
               cias.add(cia);
             }
@@ -348,19 +343,19 @@ public class Analyzer {
             } else {
               AST.TTCFuncExpr func = (AST.TTCFuncExpr) ttc;
               switch (func.name.id) {
-              case "Enabled":
-              case "Disabled":
-              case "Bernoulli":
-                try {
-                  Distributions.validate(func.name.id, func.params);
-                } catch (CompilerException e) {
-                  error(func, e.getMessage());
-                }
-                break;
-              default:
-                error(attackStep,
-                    String.format("Defense %s.%s may only have 'Enabled', 'Disabled', or 'Bernoulli(p)' as TTC",
-                        asset.name.id, attackStep.name.id));
+                case "Enabled":
+                case "Disabled":
+                case "Bernoulli":
+                  try {
+                    Distributions.validate(func.name.id, func.params);
+                  } catch (CompilerException e) {
+                    error(func, e.getMessage());
+                  }
+                  break;
+                default:
+                  error(attackStep,
+                      String.format("Defense %s.%s may only have 'Enabled', 'Disabled', or 'Bernoulli(p)' as TTC",
+                          asset.name.id, attackStep.name.id));
               }
             }
           } else if (attackStep.type == AST.AttackStepType.ALL || attackStep.type == AST.AttackStepType.ANY) {
@@ -401,7 +396,6 @@ public class Analyzer {
       // always ok
     } else {
       error(expr, String.format("Unexpected expression '%s'", expr.toString()));
-      System.exit(1);
     }
   }
 
@@ -418,6 +412,9 @@ public class Analyzer {
     lst.addFirst(asset);
     while (asset.parent.isPresent()) {
       asset = getAsset(asset.parent.get());
+      // added case for circular extends
+      if (asset == null || lst.contains(asset))
+        break;
       lst.addFirst(asset);
     }
     return lst;
@@ -462,13 +459,13 @@ public class Analyzer {
               error(attackStep.name,
                   String.format(
                       "Cannot override attack step '%s' previously defined at %s with different type '%s' =/= '%s'",
-                      attackStep.name.id, prevDef.name.locationString(), attackStep.type, prevDef.type));
+                      attackStep.name.id, prevDef.name.start.posString(), attackStep.type, prevDef.type));
             }
           }
         } else {
           // Attack step is defined in this scope, NOK
           error(attackStep.name, String.format("Attack step '%s' previously defined at %s", attackStep.name.id,
-              prevDef.name.locationString()));
+              prevDef.name.start.posString()));
         }
       }
     }
@@ -554,7 +551,7 @@ public class Analyzer {
       } else {
         // Field previously defined as attack step
         error(field,
-            String.format("Field '%s' previously defined as attack step at %s", field.id, prevStep.locationString()));
+            String.format("Field '%s' previously defined as attack step at %s", field.id, prevStep.start.posString()));
       }
     } else {
       // Field previously defined
@@ -565,7 +562,7 @@ public class Analyzer {
         prevField = prevDef.leftField;
       }
       error(field, String.format("Field %s.%s previously defined for asset at %s", parent.name.id, field.id,
-          prevField.locationString()));
+          prevField.start.posString()));
     }
   }
 
@@ -576,7 +573,7 @@ public class Analyzer {
       scope.add(variable.name.id, variable);
     } else {
       error(variable.name,
-          String.format("Variable '%s' previously defined at %s", variable.name.id, prevDef.name.locationString()));
+          String.format("Variable '%s' previously defined at %s", variable.name.id, prevDef.name.start.posString()));
     }
   }
 
@@ -658,7 +655,6 @@ public class Analyzer {
       return checkCallExpr(asset, (AST.CallExpr) expr);
     } else {
       error(expr, String.format("Unexpected expression '%s'", expr.toString()));
-      System.exit(1);
       return null;
     }
   }
@@ -796,6 +792,9 @@ public class Analyzer {
 
   private AST.Asset getTarget(AST.Asset asset, AST.ID name) {
     Scope<AST.Association> scope = fields.get(asset.name.id);
+    if (scope == null) {
+      return null;
+    }
     AST.Association assoc = scope.lookdown(name.id);
     if (assoc != null) {
       addFieldReference(assoc, name);
@@ -845,11 +844,15 @@ public class Analyzer {
   }
 
   private void error(String msg) {
-    failed = true;
-    LOGGER.error(msg);
+    System.err.println(msg);
+    // LOGGER.error(msg);
   }
 
-  private void error(Location pos, String msg) {
-    failed = true;
+  private void error(Location location, String message) {
+    ast.diagnostics.error(location, message);
+  }
+
+  private void warning(Location location, String message) {
+    ast.diagnostics.warn(location, message);
   }
 }
