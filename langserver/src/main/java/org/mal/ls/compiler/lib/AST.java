@@ -188,18 +188,6 @@ public class AST {
       this.meta = meta;
       this.assets = assets;
     }
-    
-    public ID getName() {
-      return this.name;
-    }
-
-    public List<Meta> getMeta() {
-      return this.meta;
-    }
-
-    public List<Asset> getAssets() {
-      return this.assets;
-    }
 
     public List<Asset> getAssets() {
       List<Asset> assets = new ArrayList<>();

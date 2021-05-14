@@ -4,17 +4,17 @@ import java.util.List;
 import java.net.URI;
 import org.eclipse.lsp4j.Position;
 import org.eclipse.lsp4j.Range;
-import org.mal.ls.module.ConversionModule;
 import org.mal.ls.compiler.lib.AST;
-import org.mal.ls.context.DefinitionContext;
-import org.mal.ls.context.DefinitionContext.DefinitionAssociation;
-import org.mal.ls.context.DefinitionContext.DefinitionAsset;
-import org.mal.ls.context.DefinitionContext.DefinitionAttackStep;
-import org.mal.ls.context.DefinitionContext.DefinitionCategory;
-import org.mal.ls.context.DefinitionContext.DefinitionVariable;
-import org.mal.ls.context.DefinitionContext.DefinitionReaches;
-import org.mal.ls.context.DefinitionContext.DefinitionRequires;
-import org.mal.ls.context.DefinitionContext.DefinitionItem;
+import org.mal.ls.compiler.lib.AST.Asset;
+import org.mal.ls.compiler.lib.AST.Association;
+import org.mal.ls.compiler.lib.AST.AttackStep;
+import org.mal.ls.compiler.lib.AST.Category;
+import org.mal.ls.compiler.lib.AST.Expr;
+import org.mal.ls.compiler.lib.AST.ID;
+import org.mal.ls.compiler.lib.AST.Variable;
+import org.mal.ls.compiler.lib.AST.Reaches;
+import org.mal.ls.compiler.lib.AST.Requires;
+import org.mal.ls.compiler.lib.Location;
 
 public class DefinitionHandler {
   
@@ -87,8 +87,8 @@ public class DefinitionHandler {
   }
 
   private void setRange(DefinitionItem di, Range range) {
-      range.setStart(ConversionModule.compilerToClient(new Position(di.startLine, di.startChar)));
-      range.setEnd(ConversionModule.compilerToClient(new Position(di.endLine, di.endChar)));
+      range.setStart(new Position(di.startLine, di.startChar));
+      range.setEnd(new Position(di.endLine, di.endChar));
       this.definitionUri = di.filename;
   }
 
@@ -98,7 +98,7 @@ public class DefinitionHandler {
   public String getVariable(Position position, AST ast) {
     this.dc = new DefinitionContext(ast);
     resetVariable();
-    position = ConversionModule.clientToCompiler(position);
+    System.err.println(position);
     int line = position.getLine();
     int character = position.getCharacter();
 
@@ -121,8 +121,13 @@ public class DefinitionHandler {
   }
 
   private void iterReaches(List<DefinitionReaches> reaches, int line, int character) {
+    System.err.println("HERE");
     reaches.forEach((r) -> {
-      int startLine, startChar, endLine, endChar;
+      System.err.println("HERE");
+      System.err.println(r.name);
+      System.err.println(r.startLine);
+      System.err.println(r.endLine);
+      System.err.println(r.startChar);
       if(r.endLine >= line && 
         line >= r.startLine && 
         r.endChar >= character && 
@@ -134,7 +139,6 @@ public class DefinitionHandler {
 
   private void iterRequires(List<DefinitionRequires> requires, int line, int character) {
     requires.forEach((r) -> {
-      int startLine, startChar, endLine, endChar;
       if(r.endLine >= line && 
         line >= r.startLine && 
         r.endChar >= character && 

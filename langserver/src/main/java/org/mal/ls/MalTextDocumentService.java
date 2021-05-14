@@ -117,6 +117,7 @@ public class MalTextDocumentService implements TextDocumentService {
     List<Location> locationList = new ArrayList<>();
     return CompletableFuture.supplyAsync(() -> {
       String variable = this.defHandler.getVariable(params.getPosition(), this.ast);
+      System.err.println(variable);
       if (!variable.equals("")) {
         Range range = this.defHandler.getDefinitionRange();
         String uri = this.defHandler.getDefinitionUri(context.get(DocumentContextKeys.URI_KEY));
@@ -124,6 +125,8 @@ public class MalTextDocumentService implements TextDocumentService {
         location.setUri(uri);
         location.setRange(range);
         locationList.add(location);
+      } else {
+        System.err.println("variable not found");
       }
       return Either.forLeft(locationList);
     });

@@ -55,14 +55,14 @@ public class DefinitionContext {
 
   private void iterCategories(List<Category> categories) {
     categories.forEach((category) -> {
-      this.categories.add(new DefinitionCategory(this, category.getName().getId(), category.filename, category.start.line, category.end.line, category.start.col, category.end.col));
+      this.categories.add(new DefinitionCategory(this, category.name.id, category.filename, category.start.line, category.end.line, category.start.col, category.end.col));
       iterAssets(category.getAssets());
     });
   }
 
   private void iterAssets(List<Asset> assets) {
     assets.forEach((asset) -> {
-      this.assets.add(new DefinitionAsset(this, asset.getName().getId(), asset.filename, asset.start.line, asset.end.line, asset.start.col, asset.end.col));
+      this.assets.add(new DefinitionAsset(this, asset.name.id, asset.filename, asset.start.line, asset.end.line, asset.start.col, asset.end.col));
       iterAttackSteps(asset.getAttacksteps());
       iterVariables(asset.getVariables());
     });
@@ -70,7 +70,7 @@ public class DefinitionContext {
 
   private void iterAttackSteps(List<AttackStep> attackSteps) {
     attackSteps.forEach((as) -> {
-      this.attackSteps.add(new DefinitionAttackStep(this, as.getName().getId(), as.filename, as.start.line, as.end.line, as.start.col, as.end.col));
+      this.attackSteps.add(new DefinitionAttackStep(this, as.name.id, as.filename, as.start.line, as.end.line, as.start.col, as.end.col));
       Optional<Requires> requires = as.getRequires();
       if (!requires.isEmpty())
         iterRequires(requires);
@@ -85,6 +85,7 @@ public class DefinitionContext {
     List<Expr> e = r.requires;
     e.forEach((expr) -> {
       String str = trimString(expr.toString());
+      System.err.println(str);
       String[] exprList = str.split(",");
       String name = "", filename = "";
       for (int i = 0; i<exprList.length; i++){
@@ -131,7 +132,7 @@ public class DefinitionContext {
 
   private void iterVariables(List<Variable> variables) {
     variables.forEach((variable) -> {
-      this.variables.add(new DefinitionVariable(this, variable.getName().getId(), variable.filename, variable.start.line, variable.end.line, variable.start.col, variable.end.col));
+      this.variables.add(new DefinitionVariable(this, variable.name.id, variable.filename, variable.start.line, variable.end.line, variable.start.col, variable.end.col));
     });
   }
 
