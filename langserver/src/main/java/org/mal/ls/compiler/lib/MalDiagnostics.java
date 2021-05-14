@@ -1,17 +1,12 @@
 package org.mal.ls.compiler.lib;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
 
 import org.eclipse.lsp4j.Diagnostic;
 import org.eclipse.lsp4j.DiagnosticSeverity;
-import org.eclipse.lsp4j.Location;
-import org.eclipse.lsp4j.Range;
-import org.eclipse.lsp4j.Position;
 
 public class MalDiagnostics {
   private Set<DiagnosticMessage> messages = new TreeSet<>();
@@ -39,7 +34,7 @@ public class MalDiagnostics {
   public List<Diagnostic> getDiagnostics() {
     List<Diagnostic> dList = new ArrayList<>();
     for (DiagnosticMessage msg : messages) {
-      dList.add(new Diagnostic(msg.getRange(), msg.message));
+      dList.add(new Diagnostic(msg.getRange(), msg.message, msg.severity, null));
     }
     return dList;
   }
