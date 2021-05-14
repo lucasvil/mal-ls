@@ -61,7 +61,6 @@ public class Token extends Location {
 
   public Token(TokenType type, Location location, String stringValue, List<TokenError> errors) {
     super(location);
-    System.err.println("Token constructor: " + errors.size());
     this.type = type;
     this.stringValue = stringValue;
     this.doubleValue = 0.0;
@@ -107,28 +106,22 @@ public class Token extends Location {
   @Override
   public String toString() {
     StringBuilder sb = new StringBuilder();
-    sb.append(type);
-    sb.append(", ");
-    sb.append(locationString());
     switch (type) {
-    case FLOAT:
-      sb.append(", ");
-      sb.append(doubleValue);
-      break;
-    case INT:
-      sb.append(", ");
-      sb.append(intValue);
-      break;
-    case ID:
-    case STRING:
-      sb.append(", ");
-      sb.append(stringValue);
-      break;
-    default:
-      break;
+      case FLOAT:
+        sb.append(doubleValue);
+        break;
+      case INT:
+        sb.append(intValue);
+        break;
+      case ID:
+      case STRING:
+      case UNRECOGNIZEDTOKEN:
+        sb.append(stringValue);
+        break;
+      default:
+        sb.append(type);
+        break;
     }
-    sb.append(", Errors: ");
-    sb.append(errors.size());
     return sb.toString();
   }
 }

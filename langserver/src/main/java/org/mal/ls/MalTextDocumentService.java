@@ -54,13 +54,12 @@ public class MalTextDocumentService implements TextDocumentService {
   private CompletionItemsHandler texts = new CompletionItemsHandler();
 
   /**
-   * Creates and returns a of completion items 
+   * Creates and returns a of completion items
    */
   @Override
   public CompletableFuture<Either<List<CompletionItem>, CompletionList>> completion(CompletionParams completionParams) {
     HashMap<String, String[]> ciHashMap = texts.getciHashMap();
     List<CompletionItem> completionItems = new ArrayList<>();
-
     return CompletableFuture.supplyAsync(() -> {
 
       for (Map.Entry<String, String[]> ci : ciHashMap.entrySet()) {
