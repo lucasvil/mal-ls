@@ -80,13 +80,12 @@ public class MalTextDocumentService implements TextDocumentService {
    */
   @Override
   public CompletableFuture<Either<List<CompletionItem>, CompletionList>> completion(CompletionParams completionParams) {
-    List<CompletionItem> completionItems = new ArrayList<>();
     ciHandler.setCursorPos(completionParams.getPosition());
-    Map<String, CompletionItem> ciHashMap = ciHandler.getciHashMap();
+    List<CompletionItem> completionItems = new ArrayList<>();
     ciHandler.addCompletionItemASTNames(this.ast, completionItems);
+    completionItems.addAll(ciHandler.getCompletionItems());
+    completionItems.addAll(ciHandler.getCompletionItemsSnippet());
     return CompletableFuture.supplyAsync(() -> {
-      for (Map.Entry<String, CompletionItem> ci : ciHashMap.entrySet())
-        completionItems.add(ci.getValue());
       return Either.forLeft(completionItems);
     });
   }
@@ -117,15 +116,8 @@ public class MalTextDocumentService implements TextDocumentService {
     List<Location> locationList = new ArrayList<>();
     return CompletableFuture.supplyAsync(() -> {
       String variable = this.defHandler.getVariable(params.getPosition(), this.ast);
-      System.err.println(variable);
-      if (!variable.equals("")) {
+      if (!variable.equals(""))
         locationList.addAll(this.defHandler.getDefinitionLocations(context.get(DocumentContextKeys.URI_KEY)));
-        //String uri = this.defHandler.getDefinitionUri(context.get(DocumentContextKeys.URI_KEY));
-        //Location location = new Location();
-        //location.setUri(uri);
-        //location.setRange(range);
-        //locationList.add(location);
-      }
       return Either.forLeft(locationList);
     });
   }

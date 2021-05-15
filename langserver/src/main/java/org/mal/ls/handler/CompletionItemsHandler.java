@@ -3,9 +3,6 @@
  */
 package org.mal.ls.handler;
 
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.Map;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -18,8 +15,11 @@ import org.mal.ls.completionItems.Abstract;
 import org.mal.ls.completionItems.AND;
 import org.mal.ls.completionItems.Append;
 import org.mal.ls.completionItems.AssetItem;
-import org.mal.ls.completionItems.Associations;
+import org.mal.ls.completionItems.AssetSnippet;
+import org.mal.ls.completionItems.AssociationItem;
+import org.mal.ls.completionItems.AssociationSnippet;
 import org.mal.ls.completionItems.CategoryItem;
+import org.mal.ls.completionItems.CategorySnippet;
 import org.mal.ls.completionItems.Defense;
 import org.mal.ls.completionItems.Define;
 import org.mal.ls.completionItems.DeveloperInfo;
@@ -45,52 +45,47 @@ import org.mal.ls.compiler.lib.AST.Variable;
 
 public class CompletionItemsHandler {
     
-    private Map<String, CompletionItem> ciHashMap;
+    private List<CompletionItem> completionItems;
+    private List<CompletionItem> completionItemsSnippet;
     private Position cursorPos;
-
-    private AssetItem asset;
-    private Associations association;
-    private CategoryItem category;
 
     public CompletionItemsHandler() {
         this.cursorPos = new Position(0,0);
-        this.ciHashMap = new HashMap<>();
+        this.completionItems = new ArrayList<>();
+        this.completionItemsSnippet = new ArrayList<>();
         initItems();
-        initUpdateItems();
+        updateItems();
     }
 
     private void initItems() {
-        this.ciHashMap.put("abstract", new Abstract().getCi());
-        this.ciHashMap.put("and", new AND().getCi());
-        this.ciHashMap.put("append", new Append().getCi());
-        this.ciHashMap.put("asset", new AssetItem().getCi());
-        this.ciHashMap.put("association", new Associations().getCi());
-        this.ciHashMap.put("category", new CategoryItem().getCi());
-        this.ciHashMap.put("defense", new Defense().getCi());
-        this.ciHashMap.put("define", new Define().getCi());
-        this.ciHashMap.put("devInfo", new DeveloperInfo().getCi());
-        this.ciHashMap.put("existence", new Existence().getCi());
-        this.ciHashMap.put("extends", new Extends().getCi());
-        this.ciHashMap.put("include", new Include().getCi());
-        this.ciHashMap.put("intersection", new Intersection().getCi());
-        this.ciHashMap.put("leadsTo", new LeadsTo().getCi());
-        this.ciHashMap.put("let", new Let().getCi());
-        this.ciHashMap.put("modInfo", new ModelerInfo().getCi());
-        this.ciHashMap.put("non-exsistence", new NonExistence().getCi());
-        this.ciHashMap.put("or", new OR().getCi());
-        this.ciHashMap.put("require", new Require().getCi());
-        this.ciHashMap.put("union", new Union().getCi());
-        this.ciHashMap.put("usrInfo", new UserInfo().getCi());
+        this.completionItems.add(new Abstract().ci);
+        this.completionItems.add(new AND().ci);
+        this.completionItems.add(new Append().ci);
+        this.completionItems.add(new AssetItem().ci);
+        this.completionItems.add(new AssociationItem().ci);
+        this.completionItems.add(new CategoryItem().ci);
+        this.completionItems.add(new Defense().ci);
+        this.completionItems.add(new Define().ci);
+        this.completionItems.add(new DeveloperInfo().ci);
+        this.completionItems.add(new Existence().ci);
+        this.completionItems.add(new Extends().ci);
+        this.completionItems.add(new Include().ci);
+        this.completionItems.add(new Intersection().ci);
+        this.completionItems.add(new LeadsTo().ci);
+        this.completionItems.add(new Let().ci);
+        this.completionItems.add(new ModelerInfo().ci);
+        this.completionItems.add(new NonExistence().ci);
+        this.completionItems.add(new OR().ci);
+        this.completionItems.add(new Require().ci);
+        this.completionItems.add(new Union().ci);
+        this.completionItems.add(new UserInfo().ci);
     }
     
-    private void initUpdateItems() {
-        this.asset = new AssetItem(this);
-        this.association = new Associations(this);
-        this.category = new CategoryItem(this);
-
-        this.ciHashMap.put("asset-snippet", this.asset.getCiSnippet());
-        this.ciHashMap.put("association-snippet", this.association.getCiSnippet());
-        this.ciHashMap.put("category-snippet", this.category.getCiSnippet());
+    private void updateItems() {
+        this.completionItemsSnippet.clear();
+        this.completionItemsSnippet.add(new AssetSnippet(getCursorPos()).ci);
+        this.completionItemsSnippet.add(new AssociationSnippet(getCursorPos()).ci);
+        this.completionItemsSnippet.add(new CategorySnippet(getCursorPos()).ci);
     }
 
     /**
@@ -105,20 +100,21 @@ public class CompletionItemsHandler {
      */
     public void setCursorPos(Position cursorPos) {
         this.cursorPos = cursorPos;
-        updateCi();
-    }
-
-    private void updateCi() {
-        this.ciHashMap.replace("asset-snippet", this.asset.getCiSnippet());
-        this.ciHashMap.replace("association-snippet", this.association.getCiSnippet());
-        this.ciHashMap.replace("category-snippet", this.category.getCiSnippet());
+        updateItems();
     }
 
     /**
-     * Returns the created hashmap containing all the completion items
+     * Returns the created List containing all the completion items
      */
-    public Map<String, CompletionItem> getciHashMap() {
-        return this.ciHashMap;
+    public List<CompletionItem> getCompletionItems() {
+        return this.completionItems;
+    }
+
+    /**
+     * Returns the created list containing all the snippet completion items
+     */
+    public List<CompletionItem> getCompletionItemsSnippet() {
+        return this.completionItemsSnippet;
     }
 
     /**
@@ -128,19 +124,15 @@ public class CompletionItemsHandler {
         List<Category> categories = ast.getCategories();
         categories.forEach((category) -> {
             completionItems.add(createCompletionItem(category.name.id));
-            
             List<Asset> assets = category.getAssets();
             assets.forEach((asset) -> {
                 completionItems.add(createCompletionItem(asset.name.id));
-                
                 List<Variable> letAsset = asset.getVariables();
                 letAsset.forEach((let)-> {
                     completionItems.add(createCompletionItem(let.name.id));
                 });
-
                 List<AttackStep> attackSteps = asset.getAttacksteps();
                 attackSteps.forEach((attackStep) -> {
-
                     completionItems.add(createCompletionItem(attackStep.name.id));
                 });
             });

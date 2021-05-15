@@ -1,9 +1,9 @@
 package org.mal.ls.handler;
 
+import java.net.URI;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
-import java.net.URI;
 import org.eclipse.lsp4j.Position;
 import org.eclipse.lsp4j.Location;
 import org.eclipse.lsp4j.Range;
