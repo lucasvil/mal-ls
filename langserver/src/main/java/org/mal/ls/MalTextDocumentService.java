@@ -38,6 +38,7 @@ import org.eclipse.lsp4j.TextEdit;
 import org.eclipse.lsp4j.WorkspaceEdit;
 import org.eclipse.lsp4j.jsonrpc.messages.Either;
 import org.eclipse.lsp4j.services.TextDocumentService;
+import org.mal.ls.compiler.lib.MalDiagnosticLogger;
 import org.mal.ls.context.DocumentContext;
 import org.mal.ls.context.DocumentContextKeys;
 import org.mal.ls.diagnostic.DiagnosticService;
@@ -157,16 +158,19 @@ public class MalTextDocumentService implements TextDocumentService {
 
   @Override
   public void didChange(DidChangeTextDocumentParams params) {
+    MalDiagnosticLogger.reset();
     server.getClient().publishDiagnostics(DiagnosticService.getDiagnosticsParams(context));
   }
 
   @Override
   public void didClose(DidCloseTextDocumentParams didCloseTextDocumentParams) {
+    MalDiagnosticLogger.reset();
     DiagnosticService.clearDiagnostics(server.getClient());
   }
 
   @Override
   public void didSave(DidSaveTextDocumentParams didSaveTextDocumentParams) {
+    MalDiagnosticLogger.reset();
     server.getClient().publishDiagnostics(DiagnosticService.getDiagnosticsParams(context));
   }
 }

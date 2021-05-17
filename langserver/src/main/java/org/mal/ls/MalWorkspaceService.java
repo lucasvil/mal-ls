@@ -5,6 +5,7 @@ import java.util.concurrent.CompletableFuture;
 
 import org.eclipse.lsp4j.DidChangeConfigurationParams;
 import org.eclipse.lsp4j.DidChangeWatchedFilesParams;
+import org.eclipse.lsp4j.FileEvent;
 import org.eclipse.lsp4j.SymbolInformation;
 import org.eclipse.lsp4j.WorkspaceSymbolParams;
 import org.eclipse.lsp4j.services.WorkspaceService;
@@ -21,7 +22,9 @@ public class MalWorkspaceService implements WorkspaceService {
   }
 
   @Override
-  public void didChangeWatchedFiles(DidChangeWatchedFilesParams didChangeWatchedFilesParams) {
-
+  public void didChangeWatchedFiles(DidChangeWatchedFilesParams params) {
+    for (FileEvent e : params.getChanges()) {
+      System.err.println(e.getType());
+    }
   }
 }

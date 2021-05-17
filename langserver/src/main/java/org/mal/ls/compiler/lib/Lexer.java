@@ -26,10 +26,9 @@ import java.util.Locale;
 import java.util.Map;
 
 import org.eclipse.lsp4j.Position;
-import org.mal.ls.compiler.lib.TokenError.TokenErrorType;
 
 public class Lexer {
-  private MalLogger LOGGER;
+  private MalDiagnosticLogger LOGGER;
   private String filename;
   private byte[] input;
   private int index;
@@ -38,7 +37,6 @@ public class Lexer {
   private int startLine;
   private int startCol;
   private List<Byte> lexeme;
-  private List<TokenError> errors;
   private List<Token> comments = new ArrayList<>();
   private boolean eof;
 
@@ -87,12 +85,8 @@ public class Lexer {
 
   public Lexer(File file, String relativeName, boolean verbose, boolean debug) throws IOException {
     Locale.setDefault(Locale.ROOT);
-    LOGGER = new MalLogger("LEXER", verbose, debug);
+    LOGGER = MalDiagnosticLogger.getInstance();
     try {
-      LOGGER.debug(String.format("Creating lexer with file '%s'", relativeName));
-      if (!file.exists()) {
-        throw new IOException(String.format("%s: No such file or directory", relativeName));
-      }
       this.filename = relativeName;
       this.input = Files.readAllBytes(file.toPath());
       this.index = 0;
@@ -100,7 +94,6 @@ public class Lexer {
       this.col = 1;
       this.eof = input.length == 0;
     } catch (IOException e) {
-      LOGGER.print();
       throw e;
     }
   }
@@ -135,9 +128,7 @@ public class Lexer {
     startLine = line;
     startCol = col;
     lexeme = new ArrayList<>();
-    errors = new ArrayList<>();
     if (eof) {
-      LOGGER.print();
       return createToken(TokenType.EOF);
     }
     byte c = consume();
@@ -251,49 +242,37 @@ public class Lexer {
       case '^':
         return createToken(TokenType.POWER);
       case '"':
-        boolean closed = true;
-        boolean invalidEscape = false;
         while (!peek('"')) {
-          if (closed) {
-            if (peek('\n')) {
-              closed = false;
-            }
+          if (peek('\n') || eof) {
+            LOGGER.error(getLocation(), String.format("Unterminated string starting at %s", getLocation().posString()));
+            return createToken(TokenType.STRING);
           }
           if (peek('\\')) {
             consume();
             if (eof) {
-              // Unterminated string starting at %s, new Position(startLine, startCol)
-              errors.add(new TokenError(TokenErrorType.UNTERMINATEDSTRING));
+              LOGGER.error(getLocation(),
+                  String.format("Unterminated string starting at %s", getLocation().posString()));
               return createToken(TokenType.STRING);
             }
-            // TODO
-            // if (input[index] < 32 || input[index] > 126) {
-            // throw exception(String.format("Invalid escape byte 0x%02X", input[index]));
-            // }
+            if (input[index] < 32 || input[index] > 126) {
+              LOGGER.error(getLocation(), String.format("Invalid escape byte 0x%02X", input[index]));
+            }
             consume();
-            if (!invalidEscape) {
-              var lexemeString = getLexemeString();
-              String escapeSequence = lexemeString.substring(lexemeString.length() - 2);
-              // lexeme = lexeme.subList(0, lexeme.size() - 2);
-              if (!escapeSequences.containsKey(escapeSequence)) {
-                // Invalid escape sequence '%s'", escapeSequence; }
-                errors.add(new TokenError(TokenErrorType.INVALIDESCAPESEQUENCE));
-              }
-              invalidEscape = true;
+            var lexemeString = getLexemeString();
+            String escapeSequence = lexemeString.substring(lexemeString.length() - 2);
+            // lexeme = lexeme.subList(0, lexeme.size() - 2);
+            if (!escapeSequences.containsKey(escapeSequence)) {
+              LOGGER.error(getLocation(), String.format("Invalid escape sequence %s.", escapeSequence));
             }
             // lexeme.add(escapeSequences.get(escapeSequence));
           } else if (eof) {
-            // Unterminated string starting at %s, new Position(startLine, startCol)
-            errors.add(new TokenError(TokenErrorType.UNTERMINATEDSTRING));
+            LOGGER.error(getLocation(), "Unterminated string starting at %s.");
             return createToken(TokenType.STRING);
           } else {
             consume();
           }
         }
         consume();
-        if (!closed) {
-          errors.add(new TokenError(TokenErrorType.UNTERMINATEDSTRING));
-        }
         return createToken(TokenType.STRING);
       default:
         if (isAlpha(c)) {
@@ -397,7 +376,11 @@ public class Lexer {
         return new Token(type, getLocation(), getLexemeString());
       case STRING:
         var lexemeString = getLexemeString();
-        return new Token(type, getLocation(), lexemeString.substring(1, lexemeString.length() - 1), errors);
+        if (lexemeString.length() > 1)
+          return new Token(type, getLocation(), lexemeString.substring(1, lexemeString.length() - 1));
+        else
+          return new Token(type, getLocation(), "");
+
       default:
         return new Token(type, getLocation());
     }

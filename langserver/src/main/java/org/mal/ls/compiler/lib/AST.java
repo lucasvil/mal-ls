@@ -20,7 +20,6 @@ import java.util.List;
 import java.util.Optional;
 
 public class AST {
-  public MalDiagnostics diagnostics = new MalDiagnostics();
   private List<Category> categories = new ArrayList<>();
   private List<Association> associations = new ArrayList<>();
   private List<Define> defines = new ArrayList<>();

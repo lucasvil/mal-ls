@@ -6,6 +6,7 @@ import org.eclipse.lsp4j.Diagnostic;
 import org.eclipse.lsp4j.PublishDiagnosticsParams;
 import org.eclipse.lsp4j.services.LanguageClient;
 import org.mal.ls.compiler.lib.Analyzer;
+import org.mal.ls.compiler.lib.MalDiagnosticLogger;
 import org.mal.ls.compiler.lib.Parser;
 import org.mal.ls.context.DocumentContext;
 import org.mal.ls.context.DocumentContextKeys;
@@ -13,7 +14,8 @@ import org.mal.ls.context.DocumentContextKeys;
 public class DiagnosticService {
   public static PublishDiagnosticsParams getDiagnosticsParams(DocumentContext context) {
     try {
-      List<Diagnostic> diagnostics = Analyzer.analyze(Parser.parse(context.get(DocumentContextKeys.URI_KEY)));
+      Analyzer.analyze(Parser.parse(context.get(DocumentContextKeys.URI_KEY)));
+      List<Diagnostic> diagnostics = List.copyOf(MalDiagnosticLogger.getInstance().messages);
 
       return new PublishDiagnosticsParams(context.get(DocumentContextKeys.URI_KEY), diagnostics);
     } catch (Exception e) {

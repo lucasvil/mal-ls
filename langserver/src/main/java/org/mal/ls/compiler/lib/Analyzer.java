@@ -27,9 +27,8 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 
-import org.eclipse.lsp4j.Diagnostic;
-
 public class Analyzer {
+  private MalDiagnosticLogger LOGGER;
   private Map<String, AST.Asset> assets = new LinkedHashMap<>();
   private Map<String, Scope<AST.Variable>> assetVariables = new LinkedHashMap<>();
   private Map<String, Scope<AST.Association>> fields = new LinkedHashMap<>();
@@ -41,13 +40,13 @@ public class Analyzer {
   private AST ast;
 
   private Analyzer(AST ast, boolean verbose, boolean debug) {
+    LOGGER = MalDiagnosticLogger.getInstance();
     Locale.setDefault(Locale.ROOT);
     this.ast = ast;
   }
 
-  public static List<Diagnostic> analyze(AST ast) throws CompilerException {
+  public static void analyze(AST ast) throws CompilerException {
     analyze(ast, false, false);
-    return ast.diagnostics.getDiagnostics();
   }
 
   public static void analyze(AST ast, boolean verbose, boolean debug) throws CompilerException {
@@ -833,10 +832,10 @@ public class Analyzer {
   }
 
   private void error(MalLocation location, String message) {
-    ast.diagnostics.error(location, message);
+    LOGGER.error(location, message);
   }
 
   private void warning(MalLocation location, String message) {
-    ast.diagnostics.warn(location, message);
+    LOGGER.warn(location, message);
   }
 }
