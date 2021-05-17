@@ -28,6 +28,7 @@ import java.util.Optional;
 import java.util.Set;
 
 public class Parser {
+  private MalDiagnosticLogger LOGGER;
   private AST ast;
   private Lexer lex;
   private Token tok;
@@ -39,6 +40,7 @@ public class Parser {
   private Parser(File file) throws IOException {
     Locale.setDefault(Locale.ROOT);
     var canonicalFile = file.getCanonicalFile();
+    LOGGER = MalDiagnosticLogger.getInstance();
     this.lex = new Lexer(canonicalFile);
     this.included = new HashSet<File>();
     this.included.add(canonicalFile);
@@ -48,6 +50,7 @@ public class Parser {
 
   private Parser(File file, Path originPath, Set<File> included) throws IOException {
     Locale.setDefault(Locale.ROOT);
+    LOGGER = MalDiagnosticLogger.getInstance();
     this.lex = new Lexer(file, originPath.relativize(Path.of(file.getPath())).toString());
     this.included = included;
     this.included.add(file);
@@ -77,12 +80,11 @@ public class Parser {
   }
 
   private void expected(TokenType type) {
-    ast.diagnostics.error(prev, String.format("Syntax error on token '%s', expected %s after this token", prev, type));
+    LOGGER.error(prev, String.format("Syntax error on token '%s', expected %s after this token", prev, type));
   }
 
   private void expected(String expected) {
-    ast.diagnostics.error(prev,
-        String.format("Syntax error on token '%s', expected %s after this token", prev, expected));
+    LOGGER.error(prev, String.format("Syntax error on token '%s', expected %s after this token", prev, expected));
   }
 
   private void skipNotInScope(ParserScope scope) {
@@ -104,12 +106,10 @@ public class Parser {
           }
         }
         sb.append("delete these tokens.");
-        ast.diagnostics.error(
-            new MalLocation(tok.getUri(), skipped.get(0).getStart(), skipped.get(skipped.size() - 1).getEnd()),
+        LOGGER.error(new MalLocation(tok.getUri(), skipped.get(0).getStart(), skipped.get(skipped.size() - 1).getEnd()),
             sb.toString());
       } else {
-        ast.diagnostics.error(skipped.get(0),
-            String.format("Syntax error on token '%s', delete this token.", skipped.get(0)));
+        LOGGER.error(skipped.get(0), String.format("Syntax error on token '%s', delete this token.", skipped.get(0)));
       }
     }
   }
@@ -179,7 +179,7 @@ public class Parser {
         case EOF:
           return ast;
         default:
-          ast.diagnostics.error(tok, String.format("Syntax error on token '%s', delete this token", tok));
+          LOGGER.error(tok, String.format("Syntax error on token '%s', delete this token", tok));
           _next();
       }
     }
@@ -239,17 +239,17 @@ public class Parser {
     try {
       file = file.getCanonicalFile();
     } catch (IOException e) {
-      ast.diagnostics.error(string, "Syntax error, could not find specified file.");
+      LOGGER.error(string, "Syntax error, could not find specified file.");
       return new AST();
     }
     if (included.contains(file)) {
-      ast.diagnostics.warn(string, "Duplicate include.");
+      LOGGER.warn(string, "Duplicate include.");
       return new AST();
     } else {
       try {
         return Parser.parse(file, originPath, included);
       } catch (IOException e) {
-        ast.diagnostics.error(string, "Syntax error, could not find specified file.");
+        LOGGER.error(string, "Syntax error, could not find specified file.");
         return new AST();
       }
     }
@@ -339,7 +339,7 @@ public class Parser {
           if (scope.expects(tok.type)) {
             break loop;
           } else {
-            ast.diagnostics.error(tok, String.format("Syntax error on token '%s', delete this token", tok));
+            LOGGER.error(tok, String.format("Syntax error on token '%s', delete this token", tok));
             _next();
             break;
           }
@@ -360,7 +360,7 @@ public class Parser {
           if (scope.expects(tok.type)) {
             return assets;
           } else {
-            ast.diagnostics.error(tok, String.format("Syntax error on token '%s', delete this token", tok));
+            LOGGER.error(tok, String.format("Syntax error on token '%s', delete this token", tok));
             _next();
             break;
           }
@@ -578,7 +578,7 @@ public class Parser {
     while (tok.type == TokenType.COMMA) {
       _next();
       if (parentScope.expects(tok.type)) {
-        ast.diagnostics.error(prev, "Syntax error, remove trailing comma.");
+        LOGGER.error(prev, "Syntax error, remove trailing comma.");
         break;
       }
       requires.add(_parseExpr(scope));
@@ -604,7 +604,7 @@ public class Parser {
     while (tok.type == TokenType.COMMA) {
       _next();
       if (parentScope.expects(tok.type)) {
-        ast.diagnostics.error(prev, "Syntax error, remove trailing comma.");
+        LOGGER.error(prev, "Syntax error, remove trailing comma.");
         break;
       }
       reaches.add(_parseExpr(scope));

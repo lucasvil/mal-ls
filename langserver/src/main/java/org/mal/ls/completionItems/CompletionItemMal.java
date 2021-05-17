@@ -4,7 +4,7 @@ import org.eclipse.lsp4j.CompletionItem;
 import org.eclipse.lsp4j.CompletionItemKind;
 
 public class CompletionItemMal {
-  
+
   public CompletionItem ci;
 
   public CompletionItemMal(String text, String label, String info, CompletionItemKind kind) {

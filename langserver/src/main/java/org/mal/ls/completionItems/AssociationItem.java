@@ -1,18 +1,8 @@
 package org.mal.ls.completionItems;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.lang.StringBuilder;
-import org.mal.ls.handler.CompletionItemsHandler;
-import org.eclipse.lsp4j.CompletionItem;
 import org.eclipse.lsp4j.CompletionItemKind;
-import org.eclipse.lsp4j.InsertTextFormat;
-import org.eclipse.lsp4j.InsertTextMode;
-import org.eclipse.lsp4j.Position;
-import org.eclipse.lsp4j.Range;
-import org.eclipse.lsp4j.TextEdit;
 
-/** 
+/**
  * This class represents the completion item associations
  */
 public class AssociationItem extends CompletionItemMal {

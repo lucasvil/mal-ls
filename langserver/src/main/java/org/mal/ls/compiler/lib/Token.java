@@ -24,7 +24,6 @@ public class Token extends MalLocation {
   public final int intValue;
   public final List<Token> preComments;
   public final List<Token> postComments;
-  public final List<TokenError> errors;
 
   public Token(TokenType type, MalLocation location) {
     super(location);
@@ -34,18 +33,6 @@ public class Token extends MalLocation {
     this.intValue = 0;
     preComments = List.of();
     postComments = List.of();
-    this.errors = List.of();
-  }
-
-  public Token(TokenType type, MalLocation location, List<TokenError> errors) {
-    super(location);
-    this.type = type;
-    this.stringValue = "";
-    this.doubleValue = 0.0;
-    this.intValue = 0;
-    preComments = List.of();
-    postComments = List.of();
-    this.errors = errors;
   }
 
   public Token(TokenType type, MalLocation location, String stringValue) {
@@ -56,18 +43,6 @@ public class Token extends MalLocation {
     this.intValue = 0;
     preComments = List.of();
     postComments = List.of();
-    this.errors = List.of();
-  }
-
-  public Token(TokenType type, MalLocation location, String stringValue, List<TokenError> errors) {
-    super(location);
-    this.type = type;
-    this.stringValue = stringValue;
-    this.doubleValue = 0.0;
-    this.intValue = 0;
-    preComments = List.of();
-    postComments = List.of();
-    this.errors = errors;
   }
 
   public Token(Token tok, List<Token> preComments, List<Token> postComments) {
@@ -78,7 +53,6 @@ public class Token extends MalLocation {
     intValue = tok.intValue;
     this.preComments = preComments;
     this.postComments = postComments;
-    this.errors = tok.errors;
   }
 
   public Token(TokenType type, MalLocation location, double doubleValue) {
@@ -89,7 +63,6 @@ public class Token extends MalLocation {
     this.intValue = 0;
     preComments = List.of();
     postComments = List.of();
-    this.errors = List.of();
   }
 
   public Token(TokenType type, MalLocation location, int intValue) {
@@ -100,7 +73,6 @@ public class Token extends MalLocation {
     this.intValue = intValue;
     preComments = List.of();
     postComments = List.of();
-    this.errors = List.of();
   }
 
   @Override

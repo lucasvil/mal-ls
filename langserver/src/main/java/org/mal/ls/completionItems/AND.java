@@ -3,7 +3,6 @@
  */
 package org.mal.ls.completionItems;
 
-import org.eclipse.lsp4j.CompletionItem;
 import org.eclipse.lsp4j.CompletionItemKind;
 
 public class AND extends CompletionItemMal {

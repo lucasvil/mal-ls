@@ -21,7 +21,7 @@ public class MalWorkspaceService implements WorkspaceService {
   }
 
   @Override
-  public void didChangeWatchedFiles(DidChangeWatchedFilesParams didChangeWatchedFilesParams) {
+  public void didChangeWatchedFiles(DidChangeWatchedFilesParams params) {
 
   }
 }

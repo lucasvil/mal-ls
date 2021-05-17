@@ -27,9 +27,8 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 
-import org.eclipse.lsp4j.Diagnostic;
-
 public class Analyzer {
+  private MalDiagnosticLogger LOGGER;
   private Map<String, AST.Asset> assets = new LinkedHashMap<>();
   private Map<String, Scope<AST.Variable>> assetVariables = new LinkedHashMap<>();
   private Map<String, Scope<AST.Association>> fields = new LinkedHashMap<>();
@@ -39,16 +38,15 @@ public class Analyzer {
   private Map<AST.Association, Map<String, Integer>> fieldReferenceCount = new HashMap<>();
 
   private AST ast;
-  private boolean failed;
 
   private Analyzer(AST ast, boolean verbose, boolean debug) {
+    LOGGER = MalDiagnosticLogger.getInstance();
     Locale.setDefault(Locale.ROOT);
     this.ast = ast;
   }
 
-  public static List<Diagnostic> analyze(AST ast) throws CompilerException {
+  public static void analyze(AST ast) throws CompilerException {
     analyze(ast, false, false);
-    return ast.diagnostics.getDiagnostics();
   }
 
   public static void analyze(AST ast, boolean verbose, boolean debug) throws CompilerException {
@@ -79,16 +77,12 @@ public class Analyzer {
     checkCIA();
     checkTTC();
     checkFields();
-    // checkVariables();
-    // checkReaches(); // might throw
+    checkVariables();
+    checkReaches(); // might throw
 
-    // checkAssociations(); // might throw
+    checkAssociations(); // might throw
 
-    // checkUnused();
-
-    // if (failed) {
-    // throw exception();
-    // }
+    checkUnused();
   }
 
   private void collectAssociations() {
@@ -115,20 +109,14 @@ public class Analyzer {
     fieldCounts.put(field.id, oldcount + 1);
   }
 
-  private void checkAssociations() throws CompilerException {
-    boolean err = false;
+  private void checkAssociations() {
     for (AST.Association assoc : ast.getAssociations()) {
       if (!assets.containsKey(assoc.leftAsset.id)) {
         error(assoc.leftAsset, String.format("Left asset '%s' is not defined", assoc.leftAsset.id));
-        err = true;
       }
       if (!assets.containsKey(assoc.rightAsset.id)) {
         error(assoc.rightAsset, String.format("Right asset '%s' is not defined", assoc.rightAsset.id));
-        err = true;
       }
-    }
-    if (err) {
-      throw exception();
     }
   }
 
@@ -137,8 +125,7 @@ public class Analyzer {
     for (AST.Variable variable : variableReferenceCount.keySet()) {
       int val = variableReferenceCount.get(variable);
       if (val == 0) {
-        // LOGGER.warning(variable.name, String.format("Variable '%s' is never used",
-        // variable.name.id));
+        warning(variable.name, String.format("Variable '%s' is never used", variable.name.id));
       }
     }
 
@@ -154,8 +141,7 @@ public class Analyzer {
         }
       }
       if (onlyZeroRefs) {
-        // LOGGER.warning(assoc, String.format("Association '%s' is never used",
-        // assoc.toShortString()));
+        warning(assoc, String.format("Association '%s' is never used", assoc.toShortString()));
       }
     }
   }
@@ -573,7 +559,7 @@ public class Analyzer {
       scope.add(variable.name.id, variable);
     } else {
       error(variable.name,
-          String.format("Variable '%s' previously defined at %s", variable.name.id, prevDef.name.getStart()));
+          String.format("Variable '%s' previously defined at %s", variable.name.id, prevDef.name.posString()));
     }
   }
 
@@ -608,9 +594,6 @@ public class Analyzer {
           }
         }
       }
-    }
-    if (failed) {
-      throw exception();
     }
   }
 
@@ -849,10 +832,10 @@ public class Analyzer {
   }
 
   private void error(MalLocation location, String message) {
-    ast.diagnostics.error(location, message);
+    LOGGER.error(location, message);
   }
 
   private void warning(MalLocation location, String message) {
-    ast.diagnostics.warn(location, message);
+    LOGGER.warn(location, message);
   }
 }
