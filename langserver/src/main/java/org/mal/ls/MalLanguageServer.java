@@ -31,6 +31,7 @@ public class MalLanguageServer implements LanguageServer, LanguageClientAware {
     initializeResult.getCapabilities().setTextDocumentSync(TextDocumentSyncKind.Full);
     CompletionOptions completionOptions = new CompletionOptions();
     initializeResult.getCapabilities().setCompletionProvider(completionOptions);
+    initializeResult.getCapabilities().setDefinitionProvider(Boolean.TRUE);
     return CompletableFuture.supplyAsync(() -> initializeResult);
   }
 

@@ -3,29 +3,16 @@
  */
 package org.mal.ls.completionItems;
 
-public class ModelerInfo {
-    private final String text = "modeler info: \"\"";
-    private final String label = "modeler info";
-    private final String info = "Provides information to modellers or parser developers. It can be used to communicate assumptions or parsing requirements, which might otherwise be ambiguous";
+import org.eclipse.lsp4j.CompletionItem;
+import org.eclipse.lsp4j.CompletionItemKind;
 
-    /** 
-     * Returns the premade text when selecting the completion item 
-     */
-    public String getText() {
-        return this.text;
-    }
+public class ModelerInfo extends CompletionItemMal {
+    private static final String text = "modeler info: ";
+    private static final String label = "modeler info";
+    private static final String info = "Provides information to modellers or parser developers. It can be used to communicate assumptions or parsing requirements, which might otherwise be ambiguous";
+    private static final CompletionItemKind kind = CompletionItemKind.Snippet;
 
-    /** 
-     * Returns the items name
-     */
-    public String getLabel() {
-        return this.label;
-    }
-
-    /** 
-     * Returns a description about the item
-     */
-    public String getInfo() {
-        return this.info;
+    public ModelerInfo() {
+        super(text, label, info, kind);
     }
 }

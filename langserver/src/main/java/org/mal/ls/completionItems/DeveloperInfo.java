@@ -3,29 +3,16 @@
  */
 package org.mal.ls.completionItems;
 
-public class DeveloperInfo {
-    private final String text = "developer info: \"\"";
-    private final String label = "developer info";
-    private final String info = "Tells other MAL writers why the attack step is used and other related information.";
+import org.eclipse.lsp4j.CompletionItem;
+import org.eclipse.lsp4j.CompletionItemKind;
 
-    /** 
-     * Returns the premade text when selecting the completion item 
-     */
-    public String getText() {
-        return this.text;
-    }
+public class DeveloperInfo extends CompletionItemMal {
+    private static final String text = "developer info: ";
+    private static final String label = "developer info";
+    private static final String info = "Tells other MAL writers why the attack step is used and other related information.";
+    private static final CompletionItemKind kind = CompletionItemKind.Snippet;
 
-    /** 
-     * Returns the items name
-     */
-    public String getLabel() {
-        return this.label;
-    }
-
-    /** 
-     * Returns a description about the item
-     */
-    public String getInfo() {
-        return this.info;
+    public DeveloperInfo() {
+        super(text, label, info, kind);
     }
 }
