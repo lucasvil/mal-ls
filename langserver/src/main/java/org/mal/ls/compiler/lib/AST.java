@@ -19,13 +19,16 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
-public class AST {
+import org.eclipse.lsp4j.Position;
+import org.eclipse.lsp4j.Range;
+
+public class AST extends MalLocation {
   private List<Category> categories = new ArrayList<>();
   private List<Association> associations = new ArrayList<>();
   private List<Define> defines = new ArrayList<>();
 
-  public AST() {
-    super();
+  public AST(String uri) {
+    super(uri, new Range(new Position(0, 0), new Position(0, 0)));
   }
 
   public void include(AST other) {

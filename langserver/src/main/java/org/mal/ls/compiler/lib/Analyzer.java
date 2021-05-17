@@ -45,23 +45,15 @@ public class Analyzer {
     this.ast = ast;
   }
 
-  public static void analyze(AST ast) throws CompilerException {
+  public static void analyze(AST ast) {
     analyze(ast, false, false);
   }
 
-  public static void analyze(AST ast, boolean verbose, boolean debug) throws CompilerException {
-    new Analyzer(ast, verbose, debug).analyzeLog();
+  public static void analyze(AST ast, boolean verbose, boolean debug) {
+    new Analyzer(ast, verbose, debug)._analyze();
   }
 
-  private void analyzeLog() throws CompilerException {
-    try {
-      _analyze();
-    } catch (CompilerException e) {
-      throw e;
-    }
-  }
-
-  private void _analyze() throws CompilerException {
+  private void _analyze() {
     collectAssociations();
 
     checkDefines();
@@ -160,7 +152,6 @@ public class Analyzer {
         error(id, "Define 'id' cannot be empty");
       }
     } else {
-      // TODO where does this type of error go?
       error("Missing required define '#id: \"\"'");
     }
     AST.Define version = defines.get("version");
@@ -170,7 +161,6 @@ public class Analyzer {
             "Define 'version' must be valid semantic versioning without pre-release identifier and build metadata");
       }
     } else {
-      // TODO where does this type of error go?
       error("Missing required define '#version: \"\"'");
     }
   }
@@ -564,7 +554,7 @@ public class Analyzer {
   }
 
   /** Evaluates each expression reached by an attack step. */
-  private void checkReaches() throws CompilerException {
+  private void checkReaches() {
     for (AST.Asset asset : assets.values()) {
       for (AST.AttackStep attackStep : asset.attackSteps) {
         if (attackStep.type == AST.AttackStepType.EXIST || attackStep.type == AST.AttackStepType.NOTEXIST) {
@@ -822,13 +812,8 @@ public class Analyzer {
     }
   }
 
-  private CompilerException exception() {
-    return new CompilerException("There were semantic errors");
-  }
-
   private void error(String msg) {
-    System.err.println(msg);
-    // LOGGER.error(msg);
+    LOGGER.error(ast, msg);
   }
 
   private void error(MalLocation location, String message) {
