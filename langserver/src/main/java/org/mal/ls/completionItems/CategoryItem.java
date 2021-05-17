@@ -1,9 +1,8 @@
 package org.mal.ls.completionItems;
 
-import org.eclipse.lsp4j.CompletionItem;
 import org.eclipse.lsp4j.CompletionItemKind;
 
-/** 
+/**
  * This class represents the completion item category
  */
 public class CategoryItem extends CompletionItemMal {
