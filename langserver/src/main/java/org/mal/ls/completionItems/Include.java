@@ -3,29 +3,16 @@
  */
 package org.mal.ls.completionItems;
 
-public class Include {
-    private final String text = "include \"\"";
-    private final String label = "include";
-    private final String info = "Includes the source code from inclded file into the current specification.";
+import org.eclipse.lsp4j.CompletionItem;
+import org.eclipse.lsp4j.CompletionItemKind;
 
-    /** 
-     * Returns the premade text when selecting the completion item 
-     */
-    public String getText() {
-        return this.text;
-    }
+public class Include extends CompletionItemMal {
+    private static final String text = "include ";
+    private static final String label = "include";
+    private static final String info = "Includes the source code from inclded file into the current specification.";
+    private static final CompletionItemKind kind = CompletionItemKind.Snippet;
 
-    /** 
-     * Returns the items name
-     */
-    public String getLabel() {
-        return this.label;
-    }
-
-    /** 
-     * Returns a description about the item
-     */
-    public String getInfo() {
-        return this.info;
+    public Include() {
+        super(text, label, info, kind);
     }
 }

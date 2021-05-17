@@ -3,29 +3,16 @@
  */
 package org.mal.ls.completionItems;
 
-public class Let {
-    private final String text = "let ";
-    private final String label = "let";
-    private final String info = "This keyword is used to associate a given expression with a specific reusable name.";
-    
-    /** 
-     * Returns the premade text when selecting the completion item 
-     */
-    public String getText() {
-        return this.text;
-    }
+import org.eclipse.lsp4j.CompletionItem;
+import org.eclipse.lsp4j.CompletionItemKind;
 
-    /** 
-     * Returns the items name
-     */
-    public String getLabel() {
-        return this.label;
-    }
+public class Let extends CompletionItemMal {
+    private static final String text = "let ";
+    private static final String label = "let";
+    private static final String info = "This keyword is used to associate a given expression with a specific reusable name.";
+    private static final CompletionItemKind kind = CompletionItemKind.Keyword;
 
-    /** 
-     * Returns a description about the item
-     */
-    public String getInfo() {
-        return this.info;
+    public Let() {
+        super(text, label, info, kind);
     }
 }

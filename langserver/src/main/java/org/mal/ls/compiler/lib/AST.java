@@ -241,6 +241,18 @@ public class AST {
       this.variables = variables;
     }
 
+    public List<Variable> getVariables() {
+      return this.variables;
+    }
+
+    public ID getName() {
+      return this.name;
+    }
+
+    public List<AttackStep> getAttacksteps() {
+      return this.attackSteps;
+    }
+
     public String toString(int spaces) {
       String indent = " ".repeat(spaces);
       StringBuilder sb = new StringBuilder();
@@ -299,6 +311,18 @@ public class AST {
       this.meta = meta;
       this.requires = requires;
       this.reaches = reaches;
+    }
+
+    public ID getName() {
+      return this.name;
+    }
+
+    public Optional<Requires> getRequires() {
+      return this.requires;
+    }
+
+    public Optional<Reaches> getReaches() {
+      return this.reaches;
     }
 
     public String toString(int spaces) {
