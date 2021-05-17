@@ -23,8 +23,6 @@ public class MalWorkspaceService implements WorkspaceService {
 
   @Override
   public void didChangeWatchedFiles(DidChangeWatchedFilesParams params) {
-    for (FileEvent e : params.getChanges()) {
-      System.err.println(e.getType());
-    }
+
   }
 }
