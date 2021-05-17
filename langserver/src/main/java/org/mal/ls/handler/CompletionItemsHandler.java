@@ -9,10 +9,13 @@ import java.util.List;
 import org.eclipse.lsp4j.CompletionItem;
 import org.eclipse.lsp4j.CompletionItemKind;
 import org.eclipse.lsp4j.Position;
-import org.eclipse.lsp4j.Range;
-
-import org.mal.ls.completionItems.Abstract;
+import org.mal.ls.compiler.lib.AST;
+import org.mal.ls.compiler.lib.AST.Asset;
+import org.mal.ls.compiler.lib.AST.AttackStep;
+import org.mal.ls.compiler.lib.AST.Category;
+import org.mal.ls.compiler.lib.AST.Variable;
 import org.mal.ls.completionItems.AND;
+import org.mal.ls.completionItems.Abstract;
 import org.mal.ls.completionItems.Append;
 import org.mal.ls.completionItems.AssetItem;
 import org.mal.ls.completionItems.AssetSnippet;
@@ -36,21 +39,14 @@ import org.mal.ls.completionItems.Require;
 import org.mal.ls.completionItems.Union;
 import org.mal.ls.completionItems.UserInfo;
 
-import org.mal.ls.compiler.lib.AST;
-import org.mal.ls.compiler.lib.AST.Asset;
-import org.mal.ls.compiler.lib.AST.AttackStep;
-import org.mal.ls.compiler.lib.AST.Category;
-import org.mal.ls.compiler.lib.AST.ID;
-import org.mal.ls.compiler.lib.AST.Variable;
-
 public class CompletionItemsHandler {
-    
+
     private List<CompletionItem> completionItems;
     private List<CompletionItem> completionItemsSnippet;
     private Position cursorPos;
 
     public CompletionItemsHandler() {
-        this.cursorPos = new Position(0,0);
+        this.cursorPos = new Position(0, 0);
         this.completionItems = new ArrayList<>();
         this.completionItemsSnippet = new ArrayList<>();
         initItems();
@@ -80,7 +76,7 @@ public class CompletionItemsHandler {
         this.completionItems.add(new Union().ci);
         this.completionItems.add(new UserInfo().ci);
     }
-    
+
     private void updateItems() {
         this.completionItemsSnippet.clear();
         this.completionItemsSnippet.add(new AssetSnippet(getCursorPos()).ci);
@@ -89,14 +85,14 @@ public class CompletionItemsHandler {
     }
 
     /**
-     * Sets the postition of the current postion of the cursor 
+     * Sets the postition of the current postion of the cursor
      */
     public Position getCursorPos() {
         return this.cursorPos;
     }
 
     /**
-     * Sets the postition of the current postion of the cursor 
+     * Sets the postition of the current postion of the cursor
      */
     public void setCursorPos(Position cursorPos) {
         this.cursorPos = cursorPos;
@@ -128,7 +124,7 @@ public class CompletionItemsHandler {
             assets.forEach((asset) -> {
                 completionItems.add(createCompletionItem(asset.name.id));
                 List<Variable> letAsset = asset.getVariables();
-                letAsset.forEach((let)-> {
+                letAsset.forEach((let) -> {
                     completionItems.add(createCompletionItem(let.name.id));
                 });
                 List<AttackStep> attackSteps = asset.getAttacksteps();

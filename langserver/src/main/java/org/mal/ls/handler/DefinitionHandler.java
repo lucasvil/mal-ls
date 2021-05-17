@@ -1,27 +1,22 @@
 package org.mal.ls.handler;
 
-import java.net.URI;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
-import org.eclipse.lsp4j.Position;
+
 import org.eclipse.lsp4j.Location;
-import org.eclipse.lsp4j.Range;
+import org.eclipse.lsp4j.Position;
 import org.mal.ls.compiler.lib.AST;
 import org.mal.ls.compiler.lib.AST.Asset;
 import org.mal.ls.compiler.lib.AST.Association;
 import org.mal.ls.compiler.lib.AST.AttackStep;
-import org.mal.ls.compiler.lib.AST.Category;
-import org.mal.ls.compiler.lib.AST.Expr;
-import org.mal.ls.compiler.lib.AST.ID;
-import org.mal.ls.compiler.lib.AST.Variable;
-import org.mal.ls.compiler.lib.AST.Reaches;
-import org.mal.ls.compiler.lib.AST.Requires;
-import org.mal.ls.compiler.lib.AST.StepExpr;
-import org.mal.ls.compiler.lib.AST.IDExpr;
 import org.mal.ls.compiler.lib.AST.BinaryExpr;
 import org.mal.ls.compiler.lib.AST.CallExpr;
-import org.mal.ls.compiler.lib.MalLocation;
+import org.mal.ls.compiler.lib.AST.Category;
+import org.mal.ls.compiler.lib.AST.Expr;
+import org.mal.ls.compiler.lib.AST.IDExpr;
+import org.mal.ls.compiler.lib.AST.Reaches;
+import org.mal.ls.compiler.lib.AST.Requires;
+import org.mal.ls.compiler.lib.AST.Variable;
 
 public class DefinitionHandler {
 
@@ -31,24 +26,24 @@ public class DefinitionHandler {
   private int cursorChar = 0;
   private AST ast;
   private List<Location> locations;
-  //private DefinitionContext dc;
+  // private DefinitionContext dc;
 
   private void reset() {
     this.variable = "";
     this.cursorLine = 0;
     this.cursorChar = 0;
   }
-  
+
   private String setLowerCase(String str) {
     char c[] = str.toCharArray();
     c[0] = Character.toLowerCase(c[0]);
     return new String(c);
   }
-  
+
   private String getDefinitionUri(String fileName) {
     StringBuilder sb = new StringBuilder();
     String[] path = this.uri.split("/");
-    for (int i = 0; i<path.length-1; i++) {
+    for (int i = 0; i < path.length - 1; i++) {
       sb.append(path[i]);
       sb.append("/");
     }
@@ -56,7 +51,6 @@ public class DefinitionHandler {
     return sb.toString();
   }
 
-  
   /*
    * Finds the range to which corresponds to the earlier found variable
    */
@@ -117,11 +111,12 @@ public class DefinitionHandler {
     int line = this.cursorLine;
     int character = this.cursorChar;
     associations.forEach((association) -> {
-      if(association.getEnd().getLine() >= line && line >= association.getStart().getLine()) {
-        if(association.leftAsset.getEnd().getCharacter() >= character && character >= association.leftAsset.getStart().getCharacter()) {
+      if (association.getEnd().getLine() >= line && line >= association.getStart().getLine()) {
+        if (association.leftAsset.getEnd().getCharacter() >= character
+            && character >= association.leftAsset.getStart().getCharacter()) {
           this.variable = setLowerCase(association.leftAsset.id);
-        }
-        else if(association.rightAsset.getEnd().getCharacter() >= character && character >= association.rightAsset.getStart().getCharacter()) {
+        } else if (association.rightAsset.getEnd().getCharacter() >= character
+            && character >= association.rightAsset.getStart().getCharacter()) {
           this.variable = setLowerCase(association.rightAsset.id);
         }
       }
@@ -155,24 +150,20 @@ public class DefinitionHandler {
     int line = this.cursorLine;
     int character = this.cursorChar;
 
-    if(expr.getEnd().getLine() >= line && 
-      line >= expr.getStart().getLine()) {
+    if (expr.getEnd().getLine() >= line && line >= expr.getStart().getLine()) {
       if (expr instanceof BinaryExpr) {
-        BinaryExpr binaryExpr = (BinaryExpr)expr;
+        BinaryExpr binaryExpr = (BinaryExpr) expr;
         checkExpr(binaryExpr.lhs);
         checkExpr(binaryExpr.rhs);
       } else if (expr instanceof CallExpr) {
-        CallExpr callExpr = (CallExpr)expr;
-        if(callExpr.getEnd().getCharacter() >= character &&
-          character >= callExpr.getStart().getCharacter()) {
-            this.variable = setLowerCase(callExpr.id.id);
+        CallExpr callExpr = (CallExpr) expr;
+        if (callExpr.getEnd().getCharacter() >= character && character >= callExpr.getStart().getCharacter()) {
+          this.variable = setLowerCase(callExpr.id.id);
         }
-      } 
-      else {
-        IDExpr idExpr = (IDExpr)expr; 
-        if(idExpr.getEnd().getCharacter() >= character &&
-          character >= idExpr.getStart().getCharacter()) {
-            this.variable = setLowerCase(idExpr.id.id);
+      } else {
+        IDExpr idExpr = (IDExpr) expr;
+        if (idExpr.getEnd().getCharacter() >= character && character >= idExpr.getStart().getCharacter()) {
+          this.variable = setLowerCase(idExpr.id.id);
         }
       }
     }
