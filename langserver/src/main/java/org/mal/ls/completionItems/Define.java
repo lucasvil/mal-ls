@@ -4,14 +4,15 @@
 package org.mal.ls.completionItems;
 
 import org.eclipse.lsp4j.CompletionItemKind;
+import org.eclipse.lsp4j.InsertTextFormat;
 
-public class Define extends CompletionItemMal {
-    private static final String text = "#key: \"\"";
+public class Define extends CompletionItemSnippetMal {
+    private static final String text = "#${1:key}: \"${2:value}\"";
     private static final String label = "define";
-    private static final String info = "Defines information for entire MAL projects. The syntax is '#key: \"value\"', for example '#version: \"1.0.0\". The keys #id and #version must be present in every project.";
     private static final CompletionItemKind kind = CompletionItemKind.Snippet;
+    private static final InsertTextFormat textFormat = InsertTextFormat.Snippet;
 
     public Define() {
-        super(text, label, info, kind);
+        super(text, label, kind, textFormat);
     }
 }

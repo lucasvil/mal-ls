@@ -4,14 +4,15 @@
 package org.mal.ls.completionItems;
 
 import org.eclipse.lsp4j.CompletionItemKind;
+import org.eclipse.lsp4j.InsertTextFormat;
 
-public class Include extends CompletionItemMal {
-    private static final String text = "include ";
+public class Include extends CompletionItemSnippetMal {
+    private static final String text = "include \"${0}\"";
     private static final String label = "include";
-    private static final String info = "Includes the source code from inclded file into the current specification.";
     private static final CompletionItemKind kind = CompletionItemKind.Snippet;
+    private static final InsertTextFormat textFormat = InsertTextFormat.Snippet;
 
     public Include() {
-        super(text, label, info, kind);
+        super(text, label, kind, textFormat);
     }
 }

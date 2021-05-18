@@ -42,15 +42,10 @@ import org.mal.ls.completionItems.UserInfo;
 public class CompletionItemsHandler {
 
     private List<CompletionItem> completionItems;
-    private List<CompletionItem> completionItemsSnippet;
-    private Position cursorPos;
 
     public CompletionItemsHandler() {
-        this.cursorPos = new Position(0, 0);
         this.completionItems = new ArrayList<>();
-        this.completionItemsSnippet = new ArrayList<>();
         initItems();
-        updateItems();
     }
 
     private void initItems() {
@@ -58,8 +53,11 @@ public class CompletionItemsHandler {
         this.completionItems.add(new AND().ci);
         this.completionItems.add(new Append().ci);
         this.completionItems.add(new AssetItem().ci);
+        this.completionItems.add(new AssetSnippet().ci);
         this.completionItems.add(new AssociationItem().ci);
+        this.completionItems.add(new AssociationSnippet().ci);
         this.completionItems.add(new CategoryItem().ci);
+        this.completionItems.add(new CategorySnippet().ci);
         this.completionItems.add(new Defense().ci);
         this.completionItems.add(new Define().ci);
         this.completionItems.add(new DeveloperInfo().ci);
@@ -77,40 +75,11 @@ public class CompletionItemsHandler {
         this.completionItems.add(new UserInfo().ci);
     }
 
-    private void updateItems() {
-        this.completionItemsSnippet.clear();
-        this.completionItemsSnippet.add(new AssetSnippet(getCursorPos()).ci);
-        this.completionItemsSnippet.add(new AssociationSnippet(getCursorPos()).ci);
-        this.completionItemsSnippet.add(new CategorySnippet(getCursorPos()).ci);
-    }
-
-    /**
-     * Sets the postition of the current postion of the cursor
-     */
-    public Position getCursorPos() {
-        return this.cursorPos;
-    }
-
-    /**
-     * Sets the postition of the current postion of the cursor
-     */
-    public void setCursorPos(Position cursorPos) {
-        this.cursorPos = cursorPos;
-        updateItems();
-    }
-
     /**
      * Returns the created List containing all the completion items
      */
     public List<CompletionItem> getCompletionItems() {
         return this.completionItems;
-    }
-
-    /**
-     * Returns the created list containing all the snippet completion items
-     */
-    public List<CompletionItem> getCompletionItemsSnippet() {
-        return this.completionItemsSnippet;
     }
 
     /**
