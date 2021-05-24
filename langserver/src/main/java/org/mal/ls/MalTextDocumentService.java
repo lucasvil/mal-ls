@@ -1,6 +1,7 @@
 package org.mal.ls;
 
 import java.io.IOException;
+import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.List;
@@ -38,28 +39,36 @@ import org.eclipse.lsp4j.WorkspaceEdit;
 import org.eclipse.lsp4j.jsonrpc.messages.Either;
 import org.eclipse.lsp4j.services.TextDocumentService;
 import org.mal.ls.compiler.lib.AST;
+import org.mal.ls.compiler.lib.CompilerException;
 import org.mal.ls.compiler.lib.MalDiagnosticLogger;
 import org.mal.ls.compiler.lib.Parser;
 import org.mal.ls.context.LanguageServerContextImpl;
 import org.mal.ls.context.ContextKeys;
+import org.mal.ls.context.DocumentManager;
+import org.mal.ls.context.DocumentManagerImpl;
 import org.mal.ls.context.LanguageServerContext;
 import org.mal.ls.handler.CompletionItemsHandler;
 import org.mal.ls.handler.DefinitionHandler;
 import org.mal.ls.handler.DiagnosticHandler;
+import org.mal.ls.handler.FormatHandler;
 
 public class MalTextDocumentService implements TextDocumentService {
   private final MalLanguageServer server;
   private final LanguageServerContext context;
+  private final DocumentManager documentManager;
   private final CompletionItemsHandler ciHandler;
   private final DefinitionHandler defHandler;
   private final DiagnosticHandler diagnosticHandler;
+  private final FormatHandler formatHandler;
 
   public MalTextDocumentService(MalLanguageServer server) {
     this.server = server;
     this.context = new LanguageServerContextImpl();
+    this.documentManager = new DocumentManagerImpl();
     this.ciHandler = new CompletionItemsHandler();
     this.defHandler = new DefinitionHandler();
     this.diagnosticHandler = new DiagnosticHandler();
+    this.formatHandler = new FormatHandler();
   }
 
   /**
@@ -136,7 +145,16 @@ public class MalTextDocumentService implements TextDocumentService {
 
   @Override
   public CompletableFuture<List<? extends TextEdit>> formatting(DocumentFormattingParams documentFormattingParams) {
-    return null;
+    String uri = documentFormattingParams.getTextDocument().getUri();
+    return CompletableFuture.supplyAsync(() -> {
+      try {
+        List<TextEdit> formatted = formatHandler.getFormatted(uri, documentManager.getContent(uri));
+        documentManager.update(uri, formatted.get(0).getNewText());
+        return formatted;
+      } catch (URISyntaxException | IOException | CompilerException e) {
+        return List.of(new TextEdit());
+      }
+    });
   }
 
   @Override
@@ -158,16 +176,19 @@ public class MalTextDocumentService implements TextDocumentService {
 
   @Override
   public void didOpen(DidOpenTextDocumentParams params) {
+    documentManager.open(params.getTextDocument().getUri(), params.getTextDocument().getText());
     buildContext(params.getTextDocument().getUri());
   }
 
   @Override
   public void didChange(DidChangeTextDocumentParams params) {
+    documentManager.update(params.getTextDocument().getUri(), params.getContentChanges().get(0).getText());
     buildContext(params.getTextDocument().getUri());
   }
 
   @Override
   public void didClose(DidCloseTextDocumentParams params) {
+    documentManager.close(params.getTextDocument().getUri());
     diagnosticHandler.clearDiagnostics(server.getClient());
   }
 
