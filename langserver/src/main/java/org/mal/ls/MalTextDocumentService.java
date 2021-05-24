@@ -28,6 +28,8 @@ import org.eclipse.lsp4j.Hover;
 import org.eclipse.lsp4j.HoverParams;
 import org.eclipse.lsp4j.Location;
 import org.eclipse.lsp4j.LocationLink;
+import org.eclipse.lsp4j.MessageParams;
+import org.eclipse.lsp4j.MessageType;
 import org.eclipse.lsp4j.ReferenceParams;
 import org.eclipse.lsp4j.RenameParams;
 import org.eclipse.lsp4j.SignatureHelp;
@@ -151,6 +153,7 @@ public class MalTextDocumentService implements TextDocumentService {
         documentManager.update(uri, formatted.get(0).getNewText());
         return formatted;
       } catch (URISyntaxException | IOException | CompilerException e) {
+        notifyClient(e.getMessage(), MessageType.Error);
         return List.of(new TextEdit());
       }
     });
@@ -207,5 +210,9 @@ public class MalTextDocumentService implements TextDocumentService {
     } finally {
       diagnosticHandler.sendDiagnostics(server.getClient(), context);
     }
+  }
+
+  private void notifyClient(String message, MessageType type){
+    server.getClient().showMessage(new MessageParams(type, message));
   }
 }
