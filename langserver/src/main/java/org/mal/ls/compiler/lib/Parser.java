@@ -34,7 +34,6 @@ public class Parser {
   private Token tok;
   private Token prev;
   private Set<File> included;
-  private File currentFile;
   private Path originPath;
 
   private Parser(File file) throws IOException {
@@ -45,7 +44,6 @@ public class Parser {
     this.lex = new Lexer(canonicalFile);
     this.included = new HashSet<File>();
     this.included.add(canonicalFile);
-    this.currentFile = canonicalFile;
     this.originPath = Path.of(canonicalFile.getParent());
   }
 
@@ -57,7 +55,6 @@ public class Parser {
     this.lex = new Lexer(canonicalFile);
     this.included = new HashSet<File>();
     this.included.add(canonicalFile);
-    this.currentFile = canonicalFile;
     this.originPath = originPath;
   }
 
@@ -68,7 +65,6 @@ public class Parser {
     this.lex = new Lexer(file, originPath.relativize(Path.of(file.getPath())).toString());
     this.included = included;
     this.included.add(file);
-    this.currentFile = file;
     this.originPath = originPath;
   }
 
@@ -250,7 +246,7 @@ public class Parser {
     var filename = string.stringValue;
     var file = new File(filename);
     if (!file.isAbsolute()) {
-      file = new File(String.format("%s/%s", originPath, filename));
+      file = new File(String.format("%s/%s", originPath, filename));  
     }
     try {
       file = file.getCanonicalFile();
