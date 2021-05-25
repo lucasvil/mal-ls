@@ -7,22 +7,12 @@ import org.eclipse.lsp4j.Range;
 import org.eclipse.lsp4j.TextEdit;
 
 public class AssociationSnippet extends CompletionItemSnippetMal {
-  private static final String text = "associations {\n\tAsset1";
-  private static final String afterText = " [foo] * <-- connects --> * [bar] Asset2\n}\n";
+  private static final String text = "associations {\n\t${1:Asset1} [${2:foo}] ${3:*} <-- ${4:connects} --> ${5:*} [${6:bar}] ${7:Asset2}\n}\n";
   private static final String label = "association-snippet";
   private static final CompletionItemKind kind = CompletionItemKind.Snippet;
   private static final InsertTextFormat textFormat = InsertTextFormat.Snippet;
 
-  public AssociationSnippet(Position cursorPos) {
-    super(text, label, kind, textFormat, textEditInit(cursorPos));
-  }
-
-  private static TextEdit textEditInit(Position start) {
-    int noLines = start.getLine();
-    int noCharacters = start.getCharacter();
-    Position end = new Position(noLines + 1, noCharacters);
-    Range range = new Range(start, end);
-    TextEdit te = new TextEdit(range, afterText);
-    return te;
+  public AssociationSnippet() {
+    super(text, label, kind, textFormat);
   }
 }

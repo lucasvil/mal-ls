@@ -77,11 +77,9 @@ public class MalTextDocumentService implements TextDocumentService {
    */
   @Override
   public CompletableFuture<Either<List<CompletionItem>, CompletionList>> completion(CompletionParams completionParams) {
-    ciHandler.setCursorPos(completionParams.getPosition());
     List<CompletionItem> completionItems = new ArrayList<>();
     ciHandler.addCompletionItemASTNames(context.get(ContextKeys.AST_KEY), completionItems);
     completionItems.addAll(ciHandler.getCompletionItems());
-    completionItems.addAll(ciHandler.getCompletionItemsSnippet());
     return CompletableFuture.supplyAsync(() -> {
       return Either.forLeft(completionItems);
     });

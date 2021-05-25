@@ -12,15 +12,11 @@ public class CompletionItemSnippetMal {
 
   public CompletionItem ci;
 
-  public CompletionItemSnippetMal(String text, String label, CompletionItemKind kind, InsertTextFormat textFormat,
-      TextEdit textEdit) {
+  public CompletionItemSnippetMal(String text, String label, CompletionItemKind kind, InsertTextFormat textFormat) {
     this.ci = new CompletionItem();
     this.ci.setInsertText(text);
     this.ci.setLabel(label);
     this.ci.setKind(kind);
     this.ci.setInsertTextFormat(textFormat);
-    List<TextEdit> textEdits = new ArrayList<>();
-    textEdits.add(textEdit);
-    this.ci.setAdditionalTextEdits(textEdits);
   }
 }
