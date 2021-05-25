@@ -14,7 +14,7 @@ import org.mal.ls.MalLanguageServer;
 public class StdioLauncher {
 
     public static void main(String[] args) throws ExecutionException, InterruptedException {
-        
+
         LogManager.getLogManager().reset();
         Logger globalLogger = Logger.getLogger(Logger.GLOBAL_LOGGER_NAME);
         globalLogger.setLevel(Level.OFF);

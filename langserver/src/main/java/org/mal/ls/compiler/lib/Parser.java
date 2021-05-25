@@ -41,6 +41,7 @@ public class Parser {
     Locale.setDefault(Locale.ROOT);
     var canonicalFile = file.getCanonicalFile();
     LOGGER = MalDiagnosticLogger.getInstance();
+    this.ast = new AST(file.toURI().toString());
     this.lex = new Lexer(canonicalFile);
     this.included = new HashSet<File>();
     this.included.add(canonicalFile);
@@ -51,6 +52,7 @@ public class Parser {
   private Parser(File file, Path originPath, Set<File> included) throws IOException {
     Locale.setDefault(Locale.ROOT);
     LOGGER = MalDiagnosticLogger.getInstance();
+    this.ast = new AST(file.toURI().toString());
     this.lex = new Lexer(file, originPath.relativize(Path.of(file.getPath())).toString());
     this.included = included;
     this.included.add(file);
@@ -154,7 +156,6 @@ public class Parser {
 
   // <mal> ::= (<category> | <associations> | <include> | <define>)* EOF
   private AST _parse() {
-    ast = new AST();
     ParserScope scope = new ParserScope(TokenSet.ROOT);
     _next();
     while (true) {
@@ -240,17 +241,18 @@ public class Parser {
       file = file.getCanonicalFile();
     } catch (IOException e) {
       LOGGER.error(string, "Syntax error, could not find specified file.");
-      return new AST();
+      return new AST(file.toURI().toString());
     }
     if (included.contains(file)) {
       LOGGER.warn(string, "Duplicate include.");
-      return new AST();
+      return new AST(file.toURI().toString());
+
     } else {
       try {
         return Parser.parse(file, originPath, included);
       } catch (IOException e) {
         LOGGER.error(string, "Syntax error, could not find specified file.");
-        return new AST();
+        return new AST(file.toURI().toString());
       }
     }
   }

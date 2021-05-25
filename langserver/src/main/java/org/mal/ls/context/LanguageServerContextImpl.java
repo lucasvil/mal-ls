@@ -3,7 +3,7 @@ package org.mal.ls.context;
 import java.util.HashMap;
 import java.util.Map;
 
-public class DocumentContext implements LanguageServerContext {
+public class LanguageServerContextImpl implements LanguageServerContext {
   private Map<Key<?>, Object> properties = new HashMap<>();
 
   @Override
