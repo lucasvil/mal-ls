@@ -47,15 +47,15 @@ public class Parser {
     this.originPath = Path.of(canonicalFile.getParent());
   }
 
-  private Parser(File file, Path originPath) throws IOException {
+  private Parser(File file, File realFile) throws IOException {
     Locale.setDefault(Locale.ROOT);
     var canonicalFile = file.getCanonicalFile();
     LOGGER = MalDiagnosticLogger.getInstance();
     this.ast = new AST(file.toURI().toString());
-    this.lex = new Lexer(canonicalFile);
+    this.lex = new Lexer(canonicalFile, realFile.getCanonicalFile());
     this.included = new HashSet<File>();
     this.included.add(canonicalFile);
-    this.originPath = originPath;
+    this.originPath = Path.of(realFile.getCanonicalFile().getParent());
   }
 
   private Parser(File file, Path originPath, Set<File> included) throws IOException {
@@ -76,8 +76,8 @@ public class Parser {
     return new Parser(file)._parse();
   }
 
-  public static AST parse(File file, Path originPath) throws IOException {
-    return new Parser(file, originPath)._parse();
+  public static AST parse(File tmp, File actual) throws IOException {
+    return new Parser(tmp, actual)._parse();
   }
 
   private static AST parse(File file, Path originPath, Set<File> included) throws IOException {

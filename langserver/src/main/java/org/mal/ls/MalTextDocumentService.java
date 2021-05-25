@@ -208,7 +208,7 @@ public class MalTextDocumentService implements TextDocumentService {
       tmpFile.deleteOnExit();
       FileOutputStream fos = new FileOutputStream(tmpFile);
       fos.write(documentManager.getContent(uri).getBytes());
-      AST ast = Parser.parse(tmpFile, getOriginPath(uri));
+      AST ast = Parser.parse(tmpFile, new File(new URI(uri)));
       context.put(ContextKeys.AST_KEY, ast);
     } catch (IOException | URISyntaxException e) {
       // TODO Auto-generated catch block

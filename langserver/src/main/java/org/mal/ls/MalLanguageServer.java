@@ -32,7 +32,6 @@ public class MalLanguageServer implements LanguageServer, LanguageClientAware {
     CompletionOptions completionOptions = new CompletionOptions();
     initializeResult.getCapabilities().setCompletionProvider(completionOptions);
     initializeResult.getCapabilities().setDefinitionProvider(Boolean.TRUE);
-    initializeResult.getCapabilities().setDocumentFormattingProvider(Boolean.TRUE);
     return CompletableFuture.supplyAsync(() -> initializeResult);
   }
 

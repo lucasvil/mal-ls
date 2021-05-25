@@ -75,12 +75,31 @@ public class Lexer {
     this(file, file.getName(), false, false);
   }
 
+  public Lexer(File tmp, File actual) throws IOException {
+    this(tmp, actual, actual.getName(), false, false);
+  }
+
   public Lexer(File file, boolean verbose, boolean debug) throws IOException {
     this(file, file.getName(), verbose, debug);
   }
 
   public Lexer(File file, String relativeName) throws IOException {
     this(file, relativeName, false, false);
+  }
+
+  public Lexer(File tmp,File actual, String relativeName, boolean verbose, boolean debug) throws IOException {
+    Locale.setDefault(Locale.ROOT);
+    LOGGER = MalDiagnosticLogger.getInstance();
+    try {
+      this.filename = relativeName;
+      this.input = Files.readAllBytes(tmp.toPath());
+      this.index = 0;
+      this.line = 1;
+      this.col = 1;
+      this.eof = input.length == 0;
+    } catch (IOException e) {
+      throw e;
+    }
   }
 
   public Lexer(File file, String relativeName, boolean verbose, boolean debug) throws IOException {
