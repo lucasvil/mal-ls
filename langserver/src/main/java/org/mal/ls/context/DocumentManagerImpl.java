@@ -21,7 +21,7 @@ public class DocumentManagerImpl implements DocumentManager {
 
   @Override
   public void update(String uri, String newContent) {
-    if (!isOpen(uri)) {
+    if (isOpen(uri)) {
       documents.put(uri, newContent);
     }
   }

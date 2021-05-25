@@ -1,7 +1,12 @@
 package org.mal.ls;
 
+import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.PrintWriter;
+import java.net.URI;
 import java.net.URISyntaxException;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
@@ -194,20 +199,29 @@ public class MalTextDocumentService implements TextDocumentService {
 
   @Override
   public void didSave(DidSaveTextDocumentParams params) {
-    buildContext(params.getTextDocument().getUri());
   }
 
   private void buildContext(String uri) {
     context.put(ContextKeys.URI_KEY, uri);
     MalDiagnosticLogger.reset();
     try {
-      AST ast = Parser.parse(context.get(ContextKeys.URI_KEY));
+      File tmpFile = File.createTempFile("mal", "context");
+      tmpFile.deleteOnExit();
+      FileOutputStream fos = new FileOutputStream(tmpFile);
+      fos.write(documentManager.getContent(uri).getBytes());
+      AST ast = Parser.parse(tmpFile, getOriginPath(uri));
       context.put(ContextKeys.AST_KEY, ast);
     } catch (IOException | URISyntaxException e) {
-      // TODO log error
-    } finally {
+      // TODO Auto-generated catch block
+      
+    }finally {
       diagnosticHandler.sendDiagnostics(server.getClient(), context);
     }
+  }
+
+  private Path getOriginPath(String uri) throws IOException, URISyntaxException{
+    File f = new File(new URI(uri));
+    return Path.of(f.getCanonicalFile().getParent());
   }
 
   private void notifyClient(String message, MessageType type){
